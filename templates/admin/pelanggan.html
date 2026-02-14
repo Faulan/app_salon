@@ -1,0 +1,333 @@
+{% extends "layout.html" %}
+{% block title %}Kelola Pelanggan{% endblock %}
+{% block content %}
+
+<style>
+    /* 1. SINKRONISASI KOLOM INPUT (BORDER UNGU AWAL - UNTUK SEARCH & MODAL TAMBAH) */
+    .search-wrapper, .form-control-custom-style {
+        height: 50px; 
+        border-radius: 12px !important;
+        display: flex;
+        align-items: center;
+        border: 1.5px solid var(--purple-main) !important; /* Ungu sejak awal */
+        transition: all 0.3s ease;
+        background-color: #ffffff;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+    textarea.form-control-custom-style {
+        height: auto !important;
+        padding: 12px 15px;
+    }
+
+    /* Efek Fokus Menebal (3px) Ungu */
+    .search-wrapper:focus-within, .form-control-custom-style:focus {
+        border-width: 3px !important; 
+        box-shadow: 0 0 10px rgba(106, 27, 154, 0.2) !important;
+        outline: none;
+    }
+
+    /* 2. KHUSUS MODAL EDIT (TEMA KUNING EMAS) */
+    /* Border awal kuning untuk input di dalam modal edit */
+    #editCustomerModal .form-control-custom-style {
+        border-color: #ffc107 !important; /* Warna kuning button warning */
+    }
+
+    /* Fokus menebal kuning saat diklik */
+    #editCustomerModal .form-control-custom-style:focus {
+        border-width: 3px !important;
+        border-color: #ffc107 !important;
+        box-shadow: 0 0 10px rgba(255, 193, 7, 0.2) !important;
+    }
+
+    .search-input-group {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        border: none;
+        width: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-control-custom {
+        border: none !important;
+        box-shadow: none !important;
+        height: 44px;
+        padding-left: 10px;
+        background: transparent !important;
+        width: 100%;
+        font-weight: 500;
+    }
+
+    /* 3. BUTTONS & UTILS */
+    .btn-tambah-member {
+        height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(45deg, var(--purple-main), var(--pink-main));
+        color: white !important;
+        font-weight: bold;
+        border: none;
+        transition: 0.3s;
+    }
+
+    .btn-tambah-member:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(173, 20, 87, 0.4);
+    }
+
+    .bg-pink-light { background-color: #fce4ec; color: #ad1457; border-radius: 50px; }
+    .text-purple { color: var(--purple-main); }
+    .customer-row:hover { background-color: #fdf7ff; }
+    .btn-white { background: white; border: 1px solid #eee; }
+
+    /* TOGGLE PASSWORD */
+    .password-container { position: relative; width: 100%; }
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: #666;
+        z-index: 10;
+    }
+</style>
+
+<div class="container-fluid py-4 text-start">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <h3 class="fw-bold text-purple"><i class="bi bi-people-fill me-2"></i>Manajemen Member Pelanggan</h3>
+            <p class="text-muted small">Kelola database keanggotaan dan riwayat kontak pelanggan salon.</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="card card-salon border-0 shadow-sm p-3 bg-white">
+                <small class="text-muted d-block uppercase fw-bold" style="font-size: 0.7rem;">TOTAL MEMBER</small>
+                <h3 class="fw-bold text-danger mb-0">{{ pelanggan|length }} Pelanggan</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-salon shadow-sm border-0 mb-4 bg-white">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-9">
+                    <div class="search-wrapper">
+                        <div class="search-input-group">
+                            <i class="bi bi-search text-purple ms-2"></i>
+                            <input type="text" id="customerSearch" class="form-control form-control-custom shadow-none" placeholder="Cari nama, username, atau alamat...">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-tambah-member w-100 shadow-sm d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                        <i class="bi bi-person-plus-fill me-2"></i> TAMBAH MEMBER
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-salon shadow-sm border-0 overflow-hidden bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="customerTable">
+                <thead class="table-light">
+                    <tr style="background-color: var(--purple-main); color: white;">
+                        <th class="ps-4 text-white">Username</th>
+                        <th class="text-white">Nama Lengkap</th>
+                        <th class="text-white">WhatsApp</th>
+                        <th class="text-white">Alamat</th>
+                        <th class="text-center text-white">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="customerTableBody">
+                    {% for p in pelanggan %}
+                    <tr class="customer-row">
+                        <td class="ps-4"><code>@{{ p.username }}</code></td>
+                        <td><span class="fw-bold text-dark">{{ p.nama_lengkap }}</span></td>
+                        <td>
+                            <a href="https://wa.me/{{ p.no_hp }}" target="_blank" class="text-success text-decoration-none fw-bold small">
+                                <i class="bi bi-whatsapp me-1"></i>{{ p.no_hp }}
+                            </a>
+                        </td>
+                        <td class="small text-muted">{{ p.alamat[:40] }}{% if p.alamat|length > 40 %}...{% endif %}</td>
+                        <td class="text-center">
+                            <div class="btn-group shadow-sm rounded-pill overflow-hidden border bg-white">
+                                <button class="btn btn-sm btn-white text-info px-3" onclick="showDetail('{{ p.nama_lengkap }}', '{{ p.username }}', '{{ p.no_hp }}', '{{ p.alamat }}')">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                                <button class="btn btn-sm btn-white text-warning px-3" onclick="editCustomer('{{ p.id_user }}', '{{ p.nama_lengkap }}', '{{ p.no_hp }}', '{{ p.alamat }}')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <a href="/admin/pelanggan/delete/{{ p.id_user }}" class="btn btn-sm btn-white text-danger px-3" onclick="return confirm('Hapus member {{ p.nama_lengkap }}?')">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white py-3 border-0">
+            <span class="text-muted small">Ditemukan <b id="displayedCount" class="text-purple">{{ pelanggan|length }}</b> pelanggan aktif.</span>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 25px; overflow: hidden;">
+            <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-plus me-2"></i>Registrasi Member Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/register" method="POST">
+                <div class="modal-body text-start p-4">
+                    <input type="hidden" name="role" value="pelanggan">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Lengkap</label>
+                        <input type="text" name="nama" class="form-control form-control-custom-style shadow-none" required placeholder="Nama lengkap pelanggan">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Username</label>
+                            <input type="text" name="username" class="form-control form-control-custom-style shadow-none" required placeholder="Username">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label small fw-bold">Password</label>
+                            <div class="password-container">
+                                <input type="password" name="password" id="regPassword" class="form-control form-control-custom-style shadow-none" required placeholder="****">
+                                <i class="bi bi-eye-slash password-toggle" id="toggleRegPassword"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">No. WhatsApp</label>
+                        <input type="number" name="hp" class="form-control form-control-custom-style shadow-none" required placeholder="6281xxx">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Alamat Lengkap</label>
+                        <textarea name="alamat" class="form-control form-control-custom-style shadow-none" rows="3" placeholder="Alamat lengkap..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-tambah-member w-100 rounded-pill py-2 shadow">Simpan Member Baru</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editCustomerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 25px; overflow: hidden;">
+            <div class="modal-header text-dark border-0 py-3" style="background-color: #ffc107;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Perbarui Data Pelanggan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/pelanggan/update" method="POST">
+                <div class="modal-body p-4 text-start">
+                    <input type="hidden" name="id_user" id="edit_id">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Lengkap</label>
+                        <input type="text" name="nama" id="edit_nama" class="form-control form-control-custom-style shadow-none" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">No. WhatsApp</label>
+                        <input type="number" name="hp" id="edit_hp" class="form-control form-control-custom-style shadow-none" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Alamat Lengkap</label>
+                        <textarea name="alamat" id="edit_alamat" class="form-control form-control-custom-style shadow-none" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-warning w-100 py-2 fw-bold rounded-pill text-white shadow">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <h6 class="modal-title fw-bold"><i class="bi bi-info-circle me-2"></i>Detail Profil Member</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-start">
+                <div class="mb-4">
+                    <label class="text-muted small d-block uppercase fw-bold" style="font-size: 0.65rem;">Nama Lengkap</label>
+                    <h5 class="fw-bold text-dark mb-0" id="detNama">-</h5>
+                </div>
+                <div class="mb-3">
+                    <label class="text-muted small d-block fw-bold" style="font-size: 0.65rem;">Username</label>
+                    <h6 class="fw-bold text-purple" id="detUser">-</h6>
+                </div>
+                <hr class="my-3 opacity-10">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="text-muted small d-block fw-bold" style="font-size: 0.65rem;">WhatsApp</label>
+                        <h6 class="fw-bold text-dark" id="detHp">-</h6>
+                    </div>
+                    <div class="col-12">
+                        <label class="text-muted small d-block fw-bold" style="font-size: 0.65rem;">Alamat Terdaftar</label>
+                        <p class="text-muted small mb-0" id="detAlamat">-</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-secondary w-100 rounded-pill py-2 shadow-sm fw-bold" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// LIVE SEARCH LOGIC
+document.getElementById('customerSearch').addEventListener('keyup', function() {
+    let count = 0;
+    let filter = this.value.toLowerCase();
+    let rows = document.querySelectorAll('.customer-row');
+    rows.forEach(row => {
+        if(row.innerText.toLowerCase().includes(filter)) {
+            row.style.display = ''; count++;
+        } else { row.style.display = 'none'; }
+    });
+    document.getElementById('displayedCount').innerText = count;
+});
+
+// TOGGLE PASSWORD LOGIC
+const togglePassword = document.querySelector('#toggleRegPassword');
+const passwordInput = document.querySelector('#regPassword');
+
+if (togglePassword && passwordInput) {
+    togglePassword.addEventListener('click', function () {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        this.classList.toggle('bi-eye');
+        this.classList.toggle('bi-eye-slash');
+    });
+}
+
+function showDetail(nama, user, hp, alamat) {
+    document.getElementById('detNama').innerText = nama;
+    document.getElementById('detUser').innerText = '@' + user;
+    document.getElementById('detHp').innerText = hp;
+    document.getElementById('detAlamat').innerText = alamat;
+    new bootstrap.Modal(document.getElementById('detailModal')).show();
+}
+
+function editCustomer(id, nama, hp, alamat) {
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_nama').value = nama;
+    document.getElementById('edit_hp').value = hp;
+    document.getElementById('edit_alamat').value = alamat;
+    new bootstrap.Modal(document.getElementById('editCustomerModal')).show();
+}
+</script>
+
+{% endblock %}

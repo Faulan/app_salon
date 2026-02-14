@@ -1,0 +1,272 @@
+{% extends "layout.html" %}
+{% block title %}Staff Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    /* Styling Button Interaktif (Sinkron dengan Admin) */
+    .btn-interaktif {
+        border-radius: 12px;
+        background: linear-gradient(45deg, var(--purple-main), var(--pink-main));
+        color: white;
+        font-weight: bold;
+        border: none;
+        transition: all 0.3s ease;
+        padding: 8px 20px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-interaktif:hover {
+        background: linear-gradient(45deg, #511378, #ad1457);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(173, 20, 87, 0.4);
+        color: white;
+    }
+
+    .text-purple { color: var(--purple-main); }
+    .text-pink { color: var(--pink-main); }
+    
+    .border-pink { border-left: 5px solid var(--pink-main) !important; }
+    .border-purple { border-left: 5px solid var(--purple-main) !important; }
+    .border-success-custom { border-left: 5px solid #198754 !important; }
+    .bg-pink-light { background-color: #fdf2f6; color: #ad1457; border: 1px solid #f8d7da; }
+
+    /* Desain Baris Kosong (Sesuai image_b63602.png) */
+    .empty-state-icon {
+        font-size: 3rem;
+        color: #dee2e6;
+        margin-bottom: 15px;
+        display: block;
+    }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 text-start">
+        <h1 class="h3 mb-0 fw-bold text-purple">👋 Halo, {{ session['username'] }}!</h1>
+        <div class="text-muted small">Panel Performa Pelayan Glamour Salon</div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card card-salon shadow h-100 py-2 border-0 border-purple">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center text-start">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1 text-purple">Tugas Aktif (Diterima)</div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800">{{ stats.total_aktif }} Pelanggan</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card card-salon shadow h-100 py-2 border-0 border-success-custom">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center text-start">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1 text-success">Layanan Selesai</div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800">{{ stats.total_selesai }} Transaksi</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card card-salon shadow h-100 py-2 border-0 border-pink">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center text-start">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1 text-pink">Omzet Dihasilkan</div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800">Rp {{ "{:,.0f}".format(stats.total_pendapatan or 0) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-xl-8 col-lg-7 mb-4">
+            <div class="card card-salon shadow p-4 border-0" style="min-height: 400px;">
+                <h6 class="fw-bold mb-4 text-purple text-start">📉 Statistik Pendapatan Saya (7 Hari Terakhir)</h6>
+                <div style="position: relative; height:300px;">
+                    <canvas id="staffRevenueLineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-lg-5 mb-4">
+            <div class="card card-salon shadow p-4 border-0" style="min-height: 400px;">
+                <h6 class="fw-bold mb-4 text-pink text-start">📊 Kontribusi Layanan (%)</h6>
+                <div style="position: relative; height:300px;">
+                    <canvas id="staffStatusPieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-salon shadow mb-4 border-0">
+        <div class="card-header py-3 bg-white border-bottom d-flex align-items-center justify-content-between">
+            <h5 class="m-0 fw-bold text-purple"><i class="bi bi-clock-history me-2"></i>Jadwal Layanan Mendatang</h5>
+            <a href="/staff/antrian" class="btn-interaktif shadow-sm">
+                <i class="bi bi-calendar-check me-2"></i> PROSES ANTRIAN
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr style="background-color: var(--purple-main); color: white;">
+                            <th class="ps-4 text-white">Jadwal & Waktu</th>
+                            <th class="text-white">Pelanggan</th>
+                            <th class="text-white">Layanan Jasa</th>
+                            <th class="text-center text-white">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set waiting_list = antrian | selectattr("status", "equalto", "Menunggu") | list %}
+                        
+                        {% if waiting_list %}
+                            {% for item in waiting_list %}
+                            <tr>
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">{{ item.tgl_booking }}</div>
+                                    <small class="text-muted">{{ item.jam_booking }} WIB</small>
+                                </td>
+                                <td>
+                                    <div class="fw-bold text-dark">{{ item.pelanggan }}</div>
+                                    <small class="text-muted"><i class="bi bi-whatsapp me-1 text-success"></i>{{ item.no_hp }}</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-pink-light text-pink px-3 py-2 border">{{ item.nama_layanan }}</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning text-dark rounded-pill px-3 py-2">Menunggu</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-5">
+                                    <i class="bi bi-calendar-check empty-state-icon"></i>
+                                    <h6 class="fw-bold mb-1">Semua Terkendali!</h6>
+                                    <p class="small mb-0">Tidak ada jadwal pelayanan baru (Menunggu) untuk saat ini.</p>
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // --- GRAFIK GARIS: STATISTIK PENDAPATAN ---
+    const lineCtx = document.getElementById('staffRevenueLineChart').getContext('2d');
+    const gradientFill = lineCtx.createLinearGradient(0, 0, 0, 300);
+    gradientFill.addColorStop(0, 'rgba(106, 27, 154, 0.3)');
+    gradientFill.addColorStop(1, 'rgba(106, 27, 154, 0)');
+
+    new Chart(lineCtx, {
+        type: 'line',
+        data: {
+            labels: {{ line_labels | tojson }}, 
+            datasets: [{
+                label: 'Penghasilan (Rp)',
+                data: {{ line_data | tojson }},
+                borderColor: '#6a1b9a', 
+                backgroundColor: gradientFill,
+                borderWidth: 4,
+                fill: true,
+                tension: 0.45,
+                pointRadius: 6,
+                pointBackgroundColor: '#ad1457',
+                pointBorderColor: '#ffffff',
+                pointBorderWidth: 2,
+                pointHoverRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.8)',
+                    callbacks: {
+                        label: function(context) {
+                            return ' Rp ' + context.raw.toLocaleString('id-ID');
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: '#f0f0f0', drawBorder: false },
+                    ticks: {
+                        callback: function(value) {
+                            return 'Rp ' + value.toLocaleString('id-ID');
+                        }
+                    }
+                },
+                x: { grid: { display: false } }
+            },
+            animation: {
+                duration: 2000,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+
+    // --- GRAFIK LINGKARAN: STATUS KERJA ---
+    const pieCtx = document.getElementById('staffStatusPieChart').getContext('2d');
+    new Chart(pieCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Menunggu', 'Diterima', 'Selesai', 'Ditolak'],
+            datasets: [{
+                data: [
+                    {{ stats.total_menunggu or 0 }}, 
+                    {{ stats.total_aktif or 0 }}, 
+                    {{ stats.total_selesai or 0 }}, 
+                    {{ stats.total_ditolak or 0 }}
+                ],
+                backgroundColor: [
+                    '#fbc02d', // Kuning (Menunggu)
+                    '#6a1b9a', // Ungu (Diterima)
+                    '#198754', // Hijau (Selesai)
+                    '#c62828'  // Merah (Ditolak)
+                ],
+                hoverOffset: 15,
+                borderWidth: 4,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%', 
+            plugins: {
+                legend: { 
+                    position: 'bottom', 
+                    labels: { 
+                        usePointStyle: true, 
+                        padding: 20,
+                        font: { size: 12, family: "'Poppins', sans-serif" }
+                    } 
+                }
+            },
+            animation: {
+                animateScale: true,
+                animateRotate: true
+            }
+        }
+    });
+</script>
+{% endblock %}

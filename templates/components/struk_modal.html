@@ -1,0 +1,138 @@
+<div class="modal fade" id="strukModal" tabindex="-1" aria-labelledby="strukModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0" style="border-radius: 20px; box-shadow: 0 15px 35px rgba(0,0,0,0.2);">
+            <div class="modal-header border-0 text-white" style="background: linear-gradient(45deg, #6a1b9a, #ad1457); border-radius: 20px 20px 0 0;">
+                <h6 class="modal-title fw-bold" id="strukModalLabel"><i class="bi bi-receipt-cutoff me-2"></i>E-Receipt Glamour</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-4" id="strukArea">
+                <div class="text-center mb-3">
+                    <h5 class="fw-bold mb-0" style="color: #6a1b9a; letter-spacing: 1px; font-family: 'Courier New', Courier, monospace;">GLAMOUR SALON</h5>
+                    <p class="small text-muted mb-0" style="font-size: 0.7rem;">Jl. Kecantikan No. 10, Cirebon</p>
+                    <p class="small text-muted mb-0" style="font-size: 0.7rem;">Telp: (0231) 123456</p>
+                    <p class="small text-muted" style="font-size: 0.6rem; margin-top: 2px;" id="strukID">ID: #0000</p>
+                    <p class="small text-muted" style="font-size: 0.65rem;" id="strukWaktuCetak"></p>
+                </div>
+
+                <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+
+                <div class="invoice-details" style="font-size: 0.8rem; font-family: 'Courier New', Courier, monospace; line-height: 1.5;">
+                    <div class="d-flex justify-content-between">
+                        <span>PELANGGAN:</span>
+                        <span class="fw-bold" id="strukNama">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>STAF:</span>
+                        <span id="strukPelayan">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <span>LAYANAN:</span>
+                    </div>
+                    <div class="fw-bold" id="strukLayanan" style="padding-left: 10px;">-</div>
+                    <div class="d-flex justify-content-between mt-1">
+                        <span>METODE:</span>
+                        <span id="strukMetode" style="text-transform: uppercase;">-</span>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+
+                <div style="font-family: 'Courier New', Courier, monospace;">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span style="font-size: 0.85rem;">Total Tagihan</span>
+                        <span class="fw-bold" style="font-size: 0.9rem;" id="strukTotal">Rp 0</span>
+                    </div>
+                    
+                    <div id="strukTunaiDetail">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span style="font-size: 0.85rem;">Uang Bayar</span>
+                            <span style="font-size: 0.9rem;" id="strukBayar">Rp 0</span>
+                        </div>
+                        <div style="border-top: 1px solid #eee; margin: 5px 0;"></div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold" style="font-size: 0.85rem;">KEMBALIAN</span>
+                            <span class="fw-bold" style="font-size: 1.1rem; color: #198754;" id="strukKembalian">Rp 0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="border-top: 1px dashed #000; margin: 10px 0;"></div>
+
+                <div class="text-center mt-2" style="font-family: 'Courier New', Courier, monospace;">
+                    <p class="small mb-0" style="font-size: 0.7rem;">TERIMA KASIH</p>
+                    <p class="small mb-0" style="font-size: 0.6rem;">Atas Kunjungan Anda</p>
+                    <p style="font-size: 0.55rem; margin-top: 5px; font-weight: bold;">*** LUNAS ***</p>
+                </div>
+            </div>
+
+            <div class="modal-footer border-0 p-3">
+                <button type="button" class="btn btn-light w-100 mb-2 border rounded-pill small" data-bs-dismiss="modal">Tutup</button>
+                <button type="button" class="btn btn-salon w-100 py-2 shadow-sm text-white rounded-pill fw-bold" 
+                        onclick="printStruk()" 
+                        style="background: linear-gradient(45deg, #6a1b9a, #ad1457); border: none;">
+                    <i class="bi bi-printer me-2"></i>Cetak Struk Kasir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+/**
+ * Fungsi untuk mencetak area struk ke printer thermal (58mm)
+ */
+function printStruk() {
+    // 1. Update waktu cetak secara real-time saat tombol ditekan
+    const sekarang = new Date();
+    const formattedDate = sekarang.toLocaleString('id-ID', { 
+        year: 'numeric', month: '2-digit', day: '2-digit', 
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+    });
+    document.getElementById('strukWaktuCetak').innerText = formattedDate;
+
+    // 2. Ambil konten HTML dari strukArea
+    const prtContent = document.getElementById("strukArea");
+    const WinPrint = window.open('', '', 'width=400,height=600');
+    
+    // 3. Susun dokumen print dengan CSS khusus thermal
+    WinPrint.document.write('<html><head><title>Print Struk Glamour</title>');
+    WinPrint.document.write('<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">');
+    WinPrint.document.write('<style>');
+    WinPrint.document.write(`
+        @page { size: 58mm auto; margin: 0; }
+        body { 
+            font-family: "Courier New", Courier, monospace; 
+            width: 58mm; 
+            padding: 4mm; 
+            margin: 0;
+            color: #000;
+            background: #fff;
+            line-height: 1.3;
+        }
+        .text-center { text-align: center !important; }
+        .fw-bold { font-weight: bold !important; }
+        .d-flex { display: flex !important; justify-content: space-between !important; }
+        h5 { font-size: 14px; margin-bottom: 2px; color: #000 !important; }
+        p { font-size: 10px; margin: 0; color: #000 !important; }
+        .small { font-size: 9px; }
+        .invoice-details span { font-size: 10px; }
+        #strukLayanan { font-size: 11px; margin-bottom: 5px; border-left: 2px solid #333; padding-left: 5px; }
+        #strukKembalian { color: #000 !important; font-size: 13px !important; }
+        div[style*="dashed"] { border-top: 1px dashed #000 !important; }
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    `);
+    WinPrint.document.write('</style></head><body>');
+    WinPrint.document.write(prtContent.innerHTML);
+    WinPrint.document.write('</body></html>');
+    
+    WinPrint.document.close();
+    WinPrint.focus();
+    
+    // 4. Eksekusi Print
+    setTimeout(function() {
+        WinPrint.print();
+        WinPrint.close();
+    }, 600);
+}
+</script>

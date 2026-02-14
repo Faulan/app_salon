@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Glamour Salon - {% block title %}{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div id="wrapper">
+        {% if session.get('loggedin') %}
+        <nav id="sidebar">
+            <div class="sidebar-header">
+                <a href="/" style="text-decoration: none; color: inherit;">
+                    <h4 class="fw-bold">✨ GLAMOUR</h4>
+                </a>
+                <small class="text-white-50">Salon Management</small>
+            </div>
+
+            <ul class="list-unstyled components mt-4">
+                <p class="small fw-bold px-3 text-white-50">MENU UTAMA</p>
+                <li class="{{ 'active' if request.path == '/dashboard' }}">
+                    <a href="/dashboard"><i class="bi bi-house-door me-2"></i> Dashboard</a>
+                </li>
+                
+                {# --- MENU KHUSUS ADMINISTRATOR --- #}
+                {% if session.get('role') == 'admin' %}
+                    <p class="small fw-bold px-3 mt-3 text-white-50">ADMINISTRATOR</p>
+                    <li class="{{ 'active' if request.path == '/admin/booking' }}">
+                        <a href="/admin/booking"><i class="bi bi-calendar-event me-2"></i> Antrian Aktif</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/admin/riwayat' }}">
+                        <a href="/admin/riwayat"><i class="bi bi-clock-history me-2"></i> Riwayat Antrian</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/admin/pelanggan' }}">
+                        <a href="/admin/pelanggan"><i class="bi bi-people me-2"></i> Data Pelanggan</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/admin/layanan' }}">
+                        <a href="/admin/layanan"><i class="bi bi-scissors me-2"></i> Katalog Layanan</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/admin/pelayan' }}">
+                        <a href="/admin/pelayan"><i class="bi bi-person-badge me-2"></i> Tim Pelayan</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/admin/laporan' }}">
+                        <a href="/admin/laporan"><i class="bi bi-file-earmark-bar-graph me-2"></i> Laporan Keuangan</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/admin/laporan_staff' }}">
+                        <a href="/admin/laporan_staff"><i class="bi bi-person-lines-fill me-2"></i> Laporan Per Staf</a>
+                    </li>
+                    {# Tambahan rute profil untuk admin #}
+                    <li class="{{ 'active' if request.path == '/profile' }}">
+                        <a href="/profile"><i class="bi bi-person-circle me-2"></i> Profil Saya</a>
+                    </li>
+
+                {# --- MENU KHUSUS STAFF / PELAYAN --- #}
+                {% elif session.get('role') == 'staff' %}
+                    <p class="small fw-bold px-3 mt-3 text-white-50">OPERASIONAL STAFF</p>
+                    <li class="{{ 'active' if request.path == '/staff/antrian' }}">
+                        <a href="/staff/antrian"><i class="bi bi-person-workspace me-2"></i> Antrian Saya</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/staff/riwayat' }}">
+                        <a href="/staff/riwayat"><i class="bi bi-journal-check me-2"></i> Riwayat Pelayanan</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/staff/pendapatan' }}">
+                        <a href="/staff/pendapatan"><i class="bi bi-wallet2 me-2"></i> Pendapatan Saya</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/profile' }}">
+                        <a href="/profile"><i class="bi bi-person-circle me-2"></i> Profil Saya</a>
+                    </li>
+
+                {# --- MENU KHUSUS PELANGGAN --- #}
+                {% else %}
+                    <p class="small fw-bold px-3 mt-3 text-white-50">PELANGGAN</p>
+                    <li class="{{ 'active' if request.path == '/user/katalog' }}">
+                        <a href="/user/katalog"><i class="bi bi-bag-heart me-2"></i> Booking Layanan</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/user/riwayat' }}">
+                        <a href="/user/riwayat"><i class="bi bi-clock-history me-2"></i> Riwayat Saya</a>
+                    </li>
+                    <li class="{{ 'active' if request.path == '/profile' }}">
+                        <a href="/profile"><i class="bi bi-person-circle me-2"></i> Profil Saya</a>
+                    </li>
+                {% endif %}
+                
+                <hr class="mx-3 border-white-50">
+                <li>
+                    <a href="javascript:void(0)" onclick="confirmLogout()" class="text-warning">
+                        <i class="bi bi-box-arrow-right me-2"></i> Keluar Akun
+                    </a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+
+        <div id="content" class="{% if not session.get('loggedin') %}active{% endif %}">
+            
+            {% if session.get('loggedin') %}
+            <nav class="navbar navbar-expand-lg navbar-custom shadow-sm mb-4">
+                <div class="container-fluid">
+                    <button type="button" id="sidebarCollapse" class="btn">
+                        <i class="bi bi-list fs-4"></i>
+                    </button>
+                    
+                    <div class="ms-auto d-flex align-items-center">
+                        <span class="me-3 d-none d-sm-inline text-muted">Selamat datang, <b>{{ session['username'] }}</b></span>
+                        <div class="badge p-2 rounded-pill shadow-sm text-white text-uppercase px-3" 
+                             style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main)); font-size: 0.7rem;">
+                            {{ session['role'] }}
+                        </div>
+                    </div>
+                </div>
+            </nav>
+            {% endif %}
+
+            <div class="container-fluid">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <div class="alert alert-{{ category }} alert-dismissible fade show border-0 shadow-sm" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+
+                {% block content %}{% endblock %}
+            </div>
+
+            <footer class="text-center mt-5 py-3 text-muted small no-print">
+                &copy; 2026 Glamour Salon System - Proyek Basis Data Lanjut
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    
+    <script>
+        function confirmLogout() {
+            Swal.fire({
+                title: 'Yakin ingin keluar?',
+                text: "Anda akan mengakhiri sesi akses sistem Glamour Salon.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#6a1b9a', 
+                cancelButtonColor: '#ad1457',  
+                confirmButtonText: 'Ya, Keluar!',
+                cancelButtonText: 'Batal',
+                reverseButtons: true,
+                borderRadius: '15px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = "/logout";
+                }
+            })
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('sidebarCollapse');
+            if (btn) {
+                btn.addEventListener('click', function() {
+                    const sidebar = document.getElementById('sidebar');
+                    const content = document.getElementById('content');
+                    if (sidebar) sidebar.classList.toggle('active');
+                    if (content) content.classList.toggle('active');
+                });
+            }
+        });
+    </script>
+</body>
+</html>

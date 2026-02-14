@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+{% block title %}Dashboard Member{% endblock %}
+{% block content %}
+
+<style>
+    /* Styling angka statistik agar besar dan menonjol */
+    .stat-number {
+        font-size: 3.5rem;
+        font-weight: 800;
+        line-height: 1;
+        margin: 10px 0;
+    }
+    
+    .card-stat {
+        transition: transform 0.3s ease;
+        background: white;
+        border-radius: 15px !important;
+    }
+    
+    .card-stat:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+    }
+
+    /* Memastikan garis bawah selalu terlihat */
+    .border-b-custom {
+        border-bottom-style: solid !important;
+        border-bottom-width: 6px !important;
+    }
+
+    /* PERBAIKAN: MENYAMAKAN BENTUK TOMBOL RIWAYAT DENGAN TOMBOL KATALOG */
+    .btn-custom-dashboard {
+        height: 65px; /* Menyamakan tinggi agar sejajar sempurna */
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px; /* Bentuk sudut yang sama */
+        font-size: 1.1rem;
+        transition: all 0.3s ease;
+    }
+
+    .btn-outline-purple-sync {
+        background-color: white;
+        color: var(--purple-main);
+        border: 2px solid var(--purple-main);
+    }
+
+    .btn-outline-purple-sync:hover, 
+    .btn-outline-purple-sync:active, 
+    .btn-outline-purple-sync:focus {
+        background-color: var(--purple-main) !important;
+        color: white !important;
+        border-color: var(--purple-main) !important;
+        box-shadow: 0 8px 15px rgba(106, 27, 154, 0.2);
+    }
+</style>
+
+<div class="row mb-4 text-start">
+    <div class="col-12">
+        <h2 class="fw-bold" style="color: var(--purple-main);">Halo, {{ session['username'] }}! ✨</h2>
+        <p class="text-muted">Senang melihat Anda kembali. Berikut adalah ringkasan aktivitas perawatan Anda.</p>
+    </div>
+</div>
+
+<div class="row mb-5">
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card card-salon card-stat p-4 text-center border-b-custom shadow-sm" style="border-bottom-color: #ffc107 !important;">
+            <h5 class="fw-bold text-muted small text-uppercase">Menunggu</h5>
+            <p class="stat-number" style="color: #ffc107;">{{ stats.menunggu }}</p>
+            <p class="text-muted small mb-0">Sedang Diverifikasi</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card card-salon card-stat p-4 text-center border-b-custom shadow-sm" style="border-bottom-color: #0d6efd !important;">
+            <h5 class="fw-bold text-muted small text-uppercase">Diterima</h5>
+            <p class="stat-number" style="color: #0d6efd;">{{ stats.diterima }}</p>
+            <p class="text-muted small mb-0">Jadwal Perawatan Aktif</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card card-salon card-stat p-4 text-center border-b-custom shadow-sm" style="border-bottom-color: #198754 !important;">
+            <h5 class="fw-bold text-muted small text-uppercase">Selesai</h5>
+            <p class="stat-number" style="color: #198754;">{{ stats.selesai }}</p>
+            <p class="text-muted small mb-0">Total Sukses Dilayani</p>
+        </div>
+    </div>
+    
+    <div class="col-md-3 col-sm-6 mb-3">
+        <div class="card card-salon card-stat p-4 text-center border-b-custom shadow-sm" style="border-bottom-color: #dc3545 !important;">
+            <h5 class="fw-bold text-muted small text-uppercase">Ditolak</h5>
+            <p class="stat-number" style="color: #dc3545;">{{ stats.ditolak }}</p>
+            <p class="text-muted small mb-0">Dibatalkan/Ditolak</p>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-10 text-center">
+        <div class="card card-salon p-5 shadow border-0 bg-white" style="border-radius: 20px;">
+            <h3 class="fw-bold" style="color: var(--purple-main);">Siap untuk Tampil Memukau Lagi?</h3>
+            <p class="mb-4 text-muted fs-5">Jelajahi kembali katalog layanan eksklusif kami dan reservasi penata rambut terbaik Anda sekarang.</p>
+            
+            <div class="d-flex flex-column flex-md-row justify-content-center gap-3">
+                <a href="/user/katalog" class="btn btn-salon btn-custom-dashboard px-5 fw-bold shadow-sm">
+                    <i class="bi bi-calendar-heart me-2"></i>Lihat Katalog & Booking
+                </a>
+                
+                <a href="/user/riwayat" class="btn btn-outline-purple-sync btn-custom-dashboard px-5 fw-bold shadow-sm">
+                    <i class="bi bi-clock-history me-2"></i>Riwayat Saya
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

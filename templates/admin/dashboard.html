@@ -1,0 +1,157 @@
+{% extends "layout.html" %}
+{% block title %}admin dashboard{% endblock %}
+
+{% block content %}
+<style>
+    /* styling button interaktif */
+    .btn-interaktif {
+        border-radius: 12px;
+        background: linear-gradient(45deg, var(--purple-main), var(--pink-main));
+        color: white;
+        font-weight: bold;
+        border: none;
+        transition: all 0.3s ease;
+        padding: 8px 20px;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+    }
+
+    .btn-interaktif:hover {
+        background: linear-gradient(45deg, #511378, #ad1457);
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(173, 20, 87, 0.4);
+        color: white;
+    }
+
+    .text-purple { color: var(--purple-main); }
+    .text-pink { color: var(--pink-main); }
+    
+    /* utility border untuk card statistik agar seragam */
+    .border-pink { border-left: 5px solid var(--pink-main) !important; }
+    .border-purple { border-left: 5px solid var(--purple-main) !important; }
+</style>
+
+<div class="container-fluid py-4">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4 text-start">
+        <h1 class="h3 mb-0 fw-bold text-purple">📊 analitik salon</h1>
+        <a href="/admin/laporan" class="btn btn-salon btn-sm shadow-sm">
+            <i class="bi bi-download me-1"></i> generate laporan
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card card-salon shadow h-100 py-2 border-0 border-pink">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center text-start">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1 text-pink">pendapatan (selesai)</div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800">rp {{ "{:,.0f}".format(stats.pendapatan or 0) }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card card-salon shadow h-100 py-2 border-0 border-purple">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center text-start">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1 text-purple">total member</div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800">{{ stats.member }} orang</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card card-salon shadow h-100 py-2 border-0 border-start border-warning border-5">
+                <div class="card-body text-start">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-uppercase mb-1 text-warning">booking menunggu</div>
+                            <div class="h4 mb-0 font-weight-bold text-gray-800">{{ stats.pending }} order</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-xl-8 col-lg-7 mb-4">
+            <div class="card card-salon shadow p-4 border-0" style="min-height: 400px;">
+                <h6 class="fw-bold mb-4 text-purple text-start">🔥 performa staf (beban kerja)</h6>
+                <div style="position: relative; height:300px;">
+                    <canvas id="barChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4 col-lg-5 mb-4">
+            <div class="card card-salon shadow p-4 border-0" style="min-height: 400px;">
+                <h6 class="fw-bold mb-4 text-pink text-start">📈 status booking (%)</h6>
+                <div style="position: relative; height:300px;">
+                    <canvas id="pieChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-salon shadow mb-4 border-0">
+        <div class="card-header py-3 bg-white border-bottom d-flex align-items-center justify-content-between">
+            <h5 class="m-0 fw-bold text-purple"><i class="bi bi-clock-history me-2"></i>Antrian Aktif Terbaru</h5>
+            <a href="/admin/booking" class="btn-interaktif shadow-sm">
+                <i class="bi bi-arrow-right-circle me-2"></i> kelola semua
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-3 border-0">pelanggan</th>
+                            <th class="border-0">layanan</th>
+                            <th class="border-0">status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in aktivitas %}
+                        <tr>
+                            <td class="ps-3 text-start">
+                                <div class="fw-bold text-dark">{{ item.pelanggan }}</div>
+                                <small class="text-muted">{{ item.tgl_booking }} | {{ item.jam_booking }} wib</small>
+                            </td>
+                            <td class="text-start">{{ item.nama_layanan }}</td>
+                            <td class="text-start">
+                                <span class="badge {% if item.status == 'Menunggu' %}bg-warning text-dark{% elif item.status == 'Diterima' %}bg-primary{% else %}bg-secondary{% endif %} rounded-pill px-3 py-2">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center text-muted py-4">tidak ada antrian aktif saat ini.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/chart_logic.js') }}"></script>
+
+<script>
+    renderCharts(
+        [{% for item in batang %}"{{ item.nama_pelayan }}",{% endfor %}],
+        [{% for item in batang %}{{ item.total }},{% endfor %}],
+        [{% for item in pie %}"{{ item.status }}",{% endfor %}],
+        [{% for item in pie %}{{ item.jumlah }},{% endfor %}]
+    );
+</script>
+{% endblock %}

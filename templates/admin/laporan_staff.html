@@ -1,0 +1,271 @@
+{% extends "layout.html" %}
+{% block title %}Laporan Pendapatan Staf{% endblock %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+    /* 1. SINKRONISASI STYLE INPUT & TOOLBAR */
+    .toolbar-element, .search-wrapper {
+        height: 50px;
+        border-radius: 12px !important;
+        display: flex;
+        align-items: center;
+        border: 1.5px solid var(--purple-main) !important;
+        transition: all 0.3s ease;
+        background-color: #ffffff;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+    .toolbar-element:focus, .search-wrapper:focus-within {
+        border-width: 3px !important; 
+        box-shadow: 0 0 10px rgba(106, 27, 154, 0.2) !important;
+        outline: none;
+    }
+
+    .form-control-custom {
+        border: none !important;
+        box-shadow: none !important;
+        height: 44px;
+        padding-left: 10px;
+        background: transparent !important;
+        width: 100%;
+        font-weight: 500;
+    }
+
+    /* 2. BUTTON RESET CUSTOM */
+    .btn-reset-custom {
+        height: 50px;
+        border-radius: 12px;
+        background-color: white;
+        color: #ff5252;
+        font-weight: bold;
+        border: 2px solid #ff5252;
+        transition: 0.3s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .btn-reset-custom:hover { 
+        background-color: #ff5252; 
+        color: white; 
+        transform: translateY(-2px); 
+    }
+
+    /* 3. AVATAR STYLE */
+    .staff-avatar-circle {
+        width: 45px;
+        height: 45px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 2px solid #f8f9fa;
+    }
+
+    .modal-staff-avatar {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 4px solid #f8f9fa;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .btn-detail-custom {
+        background: white;
+        border: 1px solid #dee2e6;
+        color: #0dcaf0; 
+        font-weight: 600;
+        font-size: 0.75rem;
+        padding: 5px 15px;
+        border-radius: 50px;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .btn-detail-custom:hover {
+        background-color: #0dcaf0;
+        color: white !important;
+        border-color: #0dcaf0;
+    }
+
+    .bg-purple-light { background-color: #f3e5f5; color: #7b1fa2; }
+</style>
+
+<div class="container-fluid py-4 text-start">
+    <div class="report-header shadow-sm d-flex justify-content-between align-items-center bg-white p-4 mb-4" style="border-left: 10px solid var(--purple-main); border-radius: 15px;">
+        <div>
+            <h2 class="fw-bold text-purple mb-0">PRODUKTIVITAS & PENDAPATAN STAF</h2>
+            <p class="text-muted mb-0">Rekapitulasi performa kerja dan omzet yang dihasilkan oleh setiap pelayan salon.</p>
+        </div>
+        <div>
+            <button onclick="exportStaffToExcel()" class="btn btn-salon px-4 shadow-sm" style="background: linear-gradient(45deg, #198754, #28a745); border:none; height:50px; border-radius:12px; color:white; font-weight:bold;">
+                <i class="bi bi-file-earmark-excel-fill me-2"></i>EKSPOR LAPORAN
+            </button>
+        </div>
+    </div>
+
+    <div class="card card-salon p-3 border-0 shadow-sm bg-white mb-4">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-9">
+                <div class="search-wrapper">
+                    <div class="d-flex align-items-center w-100">
+                        <i class="bi bi-search text-purple ms-2"></i>
+                        <input type="text" id="staffSearch" class="form-control form-control-custom shadow-none" placeholder="Cari nama pelayan atau spesialisasi...">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button onclick="resetStaffFilter()" class="btn btn-reset-custom w-100 fw-bold">
+                    <i class="bi bi-arrow-clockwise me-1"></i>RESET FILTER
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-salon shadow-sm border-0 overflow-hidden bg-white">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-people-fill me-2"></i>Ranking Performa Pelayan</h5>
+            <span class="badge bg-danger text-white rounded-pill px-3 py-2 fw-bold shadow-sm">
+                TOTAL DATA: <span id="dataCount">{{ laporan|length }}</span>
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="staffReportTable">
+                <thead class="table-light">
+                    <tr style="background-color: var(--purple-main); color: white;">
+                        <th class="text-white text-center" width="70">Rank</th>
+                        <th class="text-white">Profil Pelayan</th>
+                        <th class="text-white">Bidang Spesialisasi</th>
+                        <th class="text-center text-white">Jumlah Layanan</th>
+                        <th class="text-end text-white">Omzet Dihasilkan</th>
+                        <th class="text-center text-white no-export">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="staffTableBody">
+                    {% for s in laporan %}
+                    <tr class="staff-row">
+                        <td class="text-center fw-bold text-muted">{{ loop.index }}</td>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='uploads/' + s.foto_pelayan) if s.foto_pelayan else url_for('static', filename='img/default-user.png') }}" 
+                                     class="staff-avatar-circle me-3">
+                                <div>
+                                    <div class="fw-bold text-dark staff-name">{{ s.nama_pelayan }}</div>
+                                    <small class="text-muted">Staf Profesional</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="text-muted staff-spec">{{ s.spesialisasi }}</span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-purple-light text-purple rounded-pill px-3">{{ s.jumlah_layanan }} Transaksi</span>
+                        </td>
+                        <td class="text-end fw-bold text-success pe-4">
+                            <span class="staff-revenue">Rp {{ "{:,.0f}".format(s.omzet_dihasilkan or 0) }}</span>
+                        </td>
+                        <td class="text-center no-export">
+                            <button class="btn-detail-custom" 
+                                    onclick="showStaffDetail('{{ s.nama_pelayan }}', '{{ s.spesialisasi }}', '{{ s.jumlah_layanan }}', '{{ s.omzet_dihasilkan }}', '{{ s.foto_pelayan }}')">
+                                <i class="bi bi-eye-fill"></i> Detail
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="staffDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <h6 class="modal-title fw-bold"><i class="bi bi-person-badge me-2"></i>Detail Performa Staf</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-start">
+                <div class="text-center mb-4">
+                    <img id="detStaffFoto" src="" class="modal-staff-avatar mb-3 shadow">
+                    <h4 class="fw-bold text-dark mb-0" id="detStaffNama">-</h4>
+                    <span class="badge bg-purple-light text-purple px-3 mt-2" id="detStaffSpec">-</span>
+                </div>
+                <hr class="opacity-10">
+                <div class="row g-3">
+                    <div class="col-6">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <label class="text-muted small d-block fw-bold mb-1">TOTAL LAYANAN</label>
+                            <h5 class="fw-bold text-dark mb-0" id="detStaffTotal">-</h5>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-3 border rounded-3 bg-light">
+                            <label class="text-muted small d-block fw-bold mb-1">TOTAL OMZET</label>
+                            <h5 class="fw-bold text-success mb-0" id="detStaffOmzet">-</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-secondary w-100 rounded-pill py-2 shadow-sm fw-bold" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function filterStaff() {
+        const searchVal = document.getElementById('staffSearch').value.toLowerCase();
+        const rows = document.querySelectorAll('.staff-row');
+        let count = 0;
+        rows.forEach(row => {
+            const name = row.querySelector('.staff-name').innerText.toLowerCase();
+            const spec = row.querySelector('.staff-spec').innerText.toLowerCase();
+            if (name.includes(searchVal) || spec.includes(searchVal)) {
+                row.style.display = ""; count++;
+            } else { row.style.display = "none"; }
+        });
+        document.getElementById('dataCount').innerText = count;
+    }
+
+    function resetStaffFilter() {
+        document.getElementById('staffSearch').value = "";
+        filterStaff();
+    }
+
+    document.getElementById('staffSearch').addEventListener('keyup', filterStaff);
+
+    function showStaffDetail(nama, spec, total, omzet, foto) {
+        document.getElementById('detStaffNama').innerText = nama;
+        document.getElementById('detStaffSpec').innerText = spec;
+        document.getElementById('detStaffTotal').innerText = total + " Transaksi";
+        document.getElementById('detStaffOmzet').innerText = "Rp " + Number(omzet).toLocaleString('id-ID');
+        const fotoPath = foto && foto !== 'None' ? "/static/uploads/" + foto : "/static/img/default-user.png";
+        document.getElementById('detStaffFoto').src = fotoPath;
+        new bootstrap.Modal(document.getElementById('staffDetailModal')).show();
+    }
+
+    // FUNGSI EKSPOR DIPERBAIKI (MENGHAPUS KOLOM AKSI)
+    function exportStaffToExcel() {
+        // Clone tabel agar tabel asli di layar tidak berubah
+        const originalTable = document.getElementById("staffReportTable");
+        const clonedTable = originalTable.cloneNode(true);
+        
+        // Hapus kolom terakhir (Aksi) dari setiap baris di tabel clone
+        const rows = clonedTable.querySelectorAll('tr');
+        rows.forEach(row => {
+            if (row.lastElementChild) {
+                row.removeChild(row.lastElementChild);
+            }
+        });
+
+        // Proses ekspor menggunakan tabel yang sudah dibersihkan
+        const wb = XLSX.utils.table_to_book(clonedTable, {sheet: "Laporan Pendapatan Staf"});
+        XLSX.writeFile(wb, "Laporan_Performa_Staf_Glamour.xlsx");
+    }
+</script>
+{% endblock %}

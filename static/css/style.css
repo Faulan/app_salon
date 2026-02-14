@@ -1,0 +1,249 @@
+/* ==========================================================
+    1. PALETTE WARNA & VARIABEL
+    ========================================================== */
+:root {
+    --purple-main: #6a1b9a;
+    --purple-light: #9c4dcc;
+    --purple-soft: #f3e5f5;
+    --pink-main: #ad1457;
+    --pink-light: #e35183;
+    --glass: rgba(255, 255, 255, 0.95);
+    --soft-bg: #f3e5f5;
+    --sidebar-width: 250px;
+}
+
+/* ==========================================================
+    2. BASE STYLING
+    ========================================================== */
+body {
+    background: linear-gradient(135deg, #f3e5f5 0%, #fce4ec 100%);
+    font-family: 'Poppins', sans-serif;
+    color: #333;
+    min-height: 100vh;
+    margin: 0;
+}
+
+#wrapper {
+    display: flex;
+    width: 100%;
+    align-items: stretch;
+}
+
+/* ==========================================================
+    3. SIDEBAR STYLING
+    ========================================================== */
+#sidebar {
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+    background: linear-gradient(180deg, var(--purple-main) 0%, var(--pink-main) 100%);
+    color: #fff;
+    transition: all 0.3s ease-in-out;
+    min-height: 100vh;
+    position: fixed; /* Tetap di kiri */
+    z-index: 1000;
+    box-shadow: 4px 0 10px rgba(0,0,0,0.1);
+}
+
+#sidebar.active {
+    margin-left: calc(var(--sidebar-width) * -1);
+}
+
+#sidebar .sidebar-header {
+    padding: 25px 20px;
+    background: rgba(0, 0, 0, 0.1);
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    margin-bottom: 5px;
+}
+
+#sidebar ul p {
+    color: rgba(255, 255, 255, 0.6);
+    padding: 20px 20px 8px 20px;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 0;
+    font-weight: 700;
+}
+
+#sidebar ul p:first-of-type {
+    padding-top: 10px !important; 
+}
+
+#sidebar ul p:not(:first-of-type) {
+    padding-top: 15px !important; 
+}
+
+#sidebar ul li a {
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    display: block;
+    color: rgba(255, 255, 255, 0.8) !important;
+    text-decoration: none !important;
+    transition: 0.3s;
+    margin-bottom: 2px;
+}
+
+#sidebar ul li a i {
+    width: 25px;
+    display: inline-block;
+}
+
+#sidebar ul li.active > a {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.2); 
+    padding-left: 28px;
+    border-left: 5px solid var(--pink-light);
+    font-weight: 600;
+}
+
+#sidebar ul li a:hover {
+    color: #fff !important;
+    background: rgba(255, 255, 255, 0.15);
+    padding-left: 28px;
+}
+
+/* ==========================================================
+    4. CONTENT AREA STYLING
+    ========================================================== */
+#content {
+    width: 100%;
+    padding: 0;
+    min-height: 100vh;
+    transition: all 0.3s;
+    margin-left: var(--sidebar-width);
+}
+
+#content.active, #content.full-width {
+    margin-left: 0;
+}
+
+.navbar-custom {
+    background: var(--glass) !important;
+    backdrop-filter: blur(10px);
+    border-bottom: 3px solid var(--purple-main);
+    padding: 15px 25px;
+}
+
+/* ==========================================================
+    5. GLAMOUR COMPONENTS & TABLE STYLING
+    ========================================================== */
+.card-salon {
+    border: none;
+    border-radius: 20px;
+    background: var(--glass);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+    padding: 25px;
+}
+
+.card-salon:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(106, 27, 154, 0.15);
+}
+
+/* --- PERBAIKAN TABEL SINKRON --- */
+.table-responsive {
+    border-radius: 15px;
+    overflow: hidden; /* Agar border radius tabel terlihat */
+    border: 1px solid #ddd;
+}
+
+.table {
+    margin-bottom: 0;
+    border-collapse: collapse !important;
+}
+
+/* Header Tabel Warna Ungu Solid */
+.table thead th {
+    background-color: var(--purple-main) !important;
+    color: white !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+    padding: 18px 15px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important; /* Garis tepi putih transparan di header */
+    text-align: center;
+}
+
+/* Garis Tepi Tiap Kolom di Body */
+.table td {
+    padding: 15px !important;
+    border: 1px solid #eee !important; /* Garis tepi halus tiap kolom */
+    vertical-align: middle;
+}
+
+/* Efek Hover Ungu Saat Memilih Data */
+.table tbody tr {
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.table tbody tr:hover {
+    background-color: var(--purple-soft) !important; /* Ungu muda */
+    cursor: pointer;
+    box-shadow: inset 4px 0 0 var(--purple-main); /* Aksen garis ungu di kiri saat hover */
+}
+
+/* --- END TABLE STYLING --- */
+
+.card-stat {
+    padding: 30px 20px !important;
+    margin-bottom: 20px;
+}
+
+.btn-salon {
+    background: linear-gradient(45deg, var(--purple-main), var(--pink-main));
+    color: white !important;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 50px;
+    font-weight: 600;
+    transition: 0.3s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-salon:hover {
+    background: linear-gradient(45deg, var(--pink-main), var(--purple-main));
+    box-shadow: 0 5px 15px rgba(173, 20, 87, 0.4);
+    letter-spacing: 0.5px;
+}
+
+.form-control {
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid #ddd;
+}
+
+.form-control:focus {
+    border-color: var(--pink-main);
+    box-shadow: 0 0 0 0.25rem rgba(173, 20, 87, 0.1);
+}
+
+#sidebarCollapse {
+    color: var(--purple-main);
+    background: #fff;
+    border: 1px solid #eee;
+    padding: 5px 12px;
+    border-radius: 8px;
+}
+
+/* ==========================================================
+    6. RESPONSIVE MOBILE
+    ========================================================== */
+@media (max-width: 768px) {
+    #sidebar {
+        margin-left: calc(var(--sidebar-width) * -1);
+    }
+    #sidebar.active {
+        margin-left: 0;
+    }
+    #content {
+        margin-left: 0;
+    }
+    #content.active {
+        margin-left: var(--sidebar-width);
+    }
+}

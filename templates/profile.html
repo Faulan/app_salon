@@ -1,0 +1,299 @@
+{% extends "layout.html" %}
+{% block title %}Profil Saya{% endblock %}
+
+{% block content %}
+<style>
+    /* 1. SINKRONISASI KOLOM INPUT */
+    .form-control-custom-style {
+        height: 50px; 
+        border-radius: 12px !important;
+        border: 1.5px solid var(--purple-main) !important;
+        transition: all 0.3s ease;
+        background-color: #ffffff;
+        padding: 0 15px;
+    }
+
+    /* KELAS KHUSUS UNTUK TEXTAREA AGAR LEBAR/TINGGI */
+    textarea.form-control-custom-style {
+        height: auto !important; /* Menimpa height 50px */
+        min-height: 120px; /* Memberikan ruang lebih luas */
+        padding-top: 12px;
+    }
+
+    .form-control-custom-style:focus {
+        border-width: 3px !important; 
+        border-color: #4a148c !important; 
+        box-shadow: 0 0 10px rgba(106, 27, 154, 0.2) !important;
+        outline: none;
+    }
+
+    /* 2. STYLE UNTUK INFORMASI PROFIL */
+    .profile-info-label {
+        color: #888;
+        font-size: 0.75rem;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .profile-info-value {
+        color: var(--purple-main);
+        font-weight: 600;
+        font-size: 1.1rem;
+    }
+
+    .badge-spesialisasi {
+        background-color: #f3e5f5;
+        color: #6a1b9a;
+        border: 1px solid #e1bee7;
+        padding: 8px 15px;
+        border-radius: 10px;
+        display: inline-block;
+    }
+
+    /* 3. STYLE FOTO PROFIL STAFF */
+    .profile-avatar-container {
+        position: relative;
+        display: inline-block;
+    }
+
+    .profile-avatar-img {
+        width: 130px;
+        height: 130px;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 4px solid #ffffff;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    }
+
+    .btn-pilih-foto-ungu {
+        border: 2px solid var(--purple-main) !important;
+        color: var(--purple-main) !important;
+        background: transparent;
+        transition: all 0.3s ease;
+        font-weight: bold;
+        border-radius: 50px;
+    }
+
+    .btn-pilih-foto-ungu.active {
+        background-color: var(--purple-main) !important;
+        color: white !important;
+    }
+
+    /* 4. TOGGLE PASSWORD */
+    .password-container { position: relative; width: 100%; }
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: var(--purple-main);
+        z-index: 10;
+    }
+
+    /* 5. BUTTON LOGOUT */
+    .btn-logout-custom {
+        color: #666;
+        text-decoration: none;
+        font-size: 0.9rem;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    .btn-logout-custom:hover {
+        color: #dc3545 !important;
+        transform: scale(1.05);
+    }
+</style>
+
+<div class="row justify-content-center py-4">
+    <div class="col-md-8 col-lg-6">
+        <div class="card card-salon shadow-lg border-0 overflow-hidden">
+            <div class="p-5 text-center text-white" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <div class="mb-3 profile-avatar-container">
+                    {% if session['role'] == 'staff' %}
+                        <img src="{{ url_for('static', filename='uploads/' + bio.foto_pelayan) if bio.foto_pelayan else url_for('static', filename='img/default-user.png') }}" 
+                             class="profile-avatar-img" alt="Avatar Staf">
+                    {% else %}
+                        {% set display_name = bio.nama_lengkap if session['role'] == 'pelanggan' else session['username'] %}
+                        <img src="https://ui-avatars.com/api/?name={{ display_name }}&background=fff&color=ad1457&size=128" 
+                             class="profile-avatar-img" alt="Avatar">
+                    {% endif %}
+                </div>
+                <h3 class="fw-bold mb-0 text-white">
+                    {% if session['role'] == 'pelanggan' %}{{ bio.nama_lengkap }}
+                    {% elif session['role'] == 'staff' %}{{ bio.nama_pelayan }}
+                    {% else %}{{ session['username'] }}{% endif %}
+                </h3>
+                <span class="badge rounded-pill bg-white text-dark mt-2 px-3 text-uppercase fw-bold" style="letter-spacing: 1px;">
+                    {{ session['role'] }}
+                </span>
+            </div>
+
+            <div class="card-body p-4 p-md-5 text-start">
+                <div class="mb-4">
+                    <div class="profile-info-label">Username Login</div>
+                    <div class="profile-info-value">@{{ session['username'] }}</div>
+                </div>
+                <hr class="opacity-10">
+                
+                {% if session['role'] == 'pelanggan' %}
+                <div class="mb-4">
+                    <div class="profile-info-label">WhatsApp</div>
+                    <div class="profile-info-value">{{ bio.no_hp or '-' }}</div>
+                </div>
+                <hr class="opacity-10">
+                <div class="mb-4">
+                    <div class="profile-info-label">Alamat</div>
+                    <div class="text-dark italic">{{ bio.alamat or 'Alamat belum diatur' }}</div>
+                </div>
+
+                {% elif session['role'] == 'staff' %}
+                <div class="mb-4">
+                    <div class="profile-info-label">Spesialisasi Keahlian</div>
+                    <div class="mt-2">
+                        <span class="badge-spesialisasi">
+                            <i class="bi bi-stars me-2"></i>{{ bio.spesialisasi or 'General Stylist' }}
+                        </span>
+                    </div>
+                </div>
+                <hr class="opacity-10">
+                <div class="mb-4">
+                    <div class="profile-info-label">Status Kerja</div>
+                    <div class="mt-1">
+                        <span class="badge {% if bio.status_aktif == 'tersedia' %}bg-success{% else %}bg-danger{% endif %} rounded-pill px-3 py-2">
+                            <i class="bi bi-circle-fill me-2" style="font-size: 0.6rem;"></i>{{ bio.status_aktif | capitalize }}
+                        </span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="d-grid gap-2 mt-5 text-center">
+                    <button class="btn btn-salon py-3 shadow-sm fw-bold rounded-pill" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                        <i class="bi bi-pencil-square me-2"></i>PENGATURAN PROFIL & AKUN
+                    </button>
+                    <a href="javascript:void(0)" onclick="confirmLogout()" class="btn-logout-custom mt-3">
+                        <i class="bi bi-box-arrow-right me-1"></i> Keluar dari Akun
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 25px; overflow: hidden;">
+            <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <h5 class="modal-title fw-bold"><i class="bi bi-gear-fill me-2"></i>Pengaturan Akun</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-start">
+                <form action="/update_profile" method="POST" enctype="multipart/form-data">
+                    
+                    {% if session['role'] == 'staff' %}
+                    <div class="text-center mb-4">
+                        <div class="profile-info-label mb-2">Foto Profil Staf</div>
+                        <img id="previewFotoProfil" src="{{ url_for('static', filename='uploads/' + bio.foto_pelayan) if bio.foto_pelayan else url_for('static', filename='img/default-user.png') }}" 
+                             class="rounded-circle border mb-2" style="width: 100px; height: 100px; object-fit: cover; border: 3px solid var(--purple-main) !important;">
+                        <div class="mt-2">
+                            <label for="uploadFotoProfil" class="btn btn-sm btn-pilih-foto-ungu px-3 shadow-sm" id="btnUploadProfile">
+                                <i class="bi bi-camera-fill me-2"></i>Ganti Foto
+                            </label>
+                            <input type="file" name="foto" id="uploadFotoProfil" hidden accept="image/*" onchange="previewProfileImage(this)">
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Username Login</label>
+                        <input type="text" name="username" class="form-control form-control-custom-style shadow-none" value="{{ session['username'] }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Password Baru <span class="text-muted fw-normal">(Kosongkan jika tidak ganti)</span></label>
+                        <div class="password-container">
+                            <input type="password" name="password" id="profilePassword" class="form-control form-control-custom-style shadow-none" placeholder="Masukkan password baru">
+                            <i class="bi bi-eye-slash password-toggle" id="toggleProfilePassword"></i>
+                        </div>
+                    </div>
+
+                    {% if session['role'] == 'pelanggan' %}
+                    <hr class="my-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Lengkap</label>
+                        <input type="text" name="nama" class="form-control form-control-custom-style shadow-none" value="{{ bio.nama_lengkap }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">No. WhatsApp</label>
+                        <input type="text" name="hp" class="form-control form-control-custom-style shadow-none" value="{{ bio.no_hp }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Alamat Rumah</label>
+                        <textarea name="alamat" class="form-control form-control-custom-style shadow-none" rows="4" required>{{ bio.alamat }}</textarea>
+                    </div>
+                    
+                    {% elif session['role'] == 'staff' %}
+                    <hr class="my-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Panggung (Tampil di Katalog)</label>
+                        <input type="text" name="nama" class="form-control form-control-custom-style shadow-none" value="{{ bio.nama_pelayan }}" required>
+                    </div>
+                    {% endif %}
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-salon w-100 py-3 shadow fw-bold rounded-pill">
+                            SIMPAN SEMUA PERUBAHAN
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function previewProfileImage(input) {
+        if (input.files && input.files[0]) {
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('previewFotoProfil').src = e.target.result;
+                document.getElementById('btnUploadProfile').classList.add('active');
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const togglePassword = document.querySelector('#toggleProfilePassword');
+        const passwordInput = document.querySelector('#profilePassword');
+        if(togglePassword) {
+            togglePassword.addEventListener('click', function () {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                this.classList.toggle('bi-eye');
+                this.classList.toggle('bi-eye-slash');
+            });
+        }
+    });
+
+    function confirmLogout() {
+        Swal.fire({
+            title: 'Yakin ingin keluar?',
+            text: "Anda akan mengakhiri sesi akses sistem Glamour Salon.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#6a1b9a', 
+            cancelButtonColor: '#ad1457',  
+            confirmButtonText: 'Ya, Keluar!',
+            cancelButtonText: 'Batal',
+            reverseButtons: true,
+            borderRadius: '15px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "/logout";
+            }
+        })
+    }
+</script>
+{% endblock %}

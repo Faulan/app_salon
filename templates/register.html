@@ -1,0 +1,189 @@
+{% extends "layout.html" %}
+{% block title %}Registrasi Member{% endblock %}
+{% block content %}
+
+<style>
+    /* 1. BACKGROUND AESTHETIC DENGAN OVERLAY UNGU TRANSPARAN */
+    body {
+        background: linear-gradient(rgba(106, 27, 154, 0.8), rgba(173, 20, 87, 0.7)), 
+                    url('https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=1374&q=80');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+    }
+
+    /* 2. KONSISTENSI TENGAH PRESISI */
+    .full-center-wrapper {
+        min-height: 90vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 0;
+    }
+
+    /* 3. STYLE CARD GLASSMORPHISM */
+    .card-salon {
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(10px);
+        border-radius: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* 4. STYLE INPUT */
+    .form-control, .form-select {
+        background-color: #f3e5f5 !important;
+        border: 2px solid #e1bee7;
+        border-radius: 12px;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus, .form-select:focus {
+        background-color: #fff !important;
+        border-color: var(--purple-main) !important;
+        box-shadow: 0 0 0 0.25rem rgba(106, 27, 154, 0.15);
+        transform: translateY(-2px);
+    }
+
+    /* 5. TOGGLE PASSWORD STYLE */
+    .password-container {
+        position: relative;
+    }
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: var(--purple-main);
+        z-index: 10;
+        font-size: 1.2rem;
+    }
+
+    .form-select {
+        height: 53px;
+    }
+
+    .btn-back {
+        color: var(--purple-main);
+        text-decoration: none;
+        font-weight: 600;
+        transition: 0.3s;
+    }
+    .btn-back:hover {
+        color: var(--pink-main);
+        text-decoration: underline;
+    }
+</style>
+
+<div class="full-center-wrapper">
+    <div class="col-md-8 col-lg-7">
+        <div class="card card-salon p-4 p-md-5 shadow-lg border-0">
+            <h2 class="text-center fw-bold mb-4" style="color: var(--purple-main);">Bergabunglah Bersama Kami</h2>
+            
+            <form action="/register" method="POST">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Username</label>
+                        <input type="text" name="username" class="form-control" placeholder="user123" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Password</label>
+                        <div class="password-container">
+                            <input type="password" name="password" id="regPassword" class="form-control" placeholder="********" required>
+                            <i class="bi bi-eye-slash password-toggle" id="toggleRegPassword"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nama Lengkap</label>
+                    <input type="text" name="nama" class="form-control" placeholder="Nama lengkap Anda" required>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">No. WhatsApp</label>
+                        <input type="text" name="hp" class="form-control" placeholder="08..." required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Daftar Sebagai</label>
+                        <select name="role" id="roleSelect" class="form-select" onchange="toggleSecretField()">
+                            <option value="pelanggan">Pelanggan</option>
+                            <option value="staff">Staff / Pelayan</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="mb-4" id="secretArea" style="display: none;">
+                    <label class="form-label text-danger fw-bold" id="secretLabel">Security Code</label>
+                    <div class="password-container">
+                        <input type="password" name="secret_code" id="secretCodeInput" class="form-control border-danger" placeholder="Masukkan kode keamanan role">
+                        <i class="bi bi-eye-slash password-toggle" id="toggleSecretCode"></i>
+                    </div>
+                    <small class="text-muted" id="secretHint">*Hanya untuk pendaftaran internal salon.</small>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Alamat Lengkap</label>
+                    <textarea name="alamat" class="form-control" rows="2" placeholder="Alamat rumah lengkap" required></textarea>
+                </div>
+
+                <div class="text-center">
+                    <button type="submit" class="btn btn-salon w-100 py-3 shadow mb-3">
+                        <i class="bi bi-person-plus-fill me-2"></i>BUAT AKUN
+                    </button>
+                    <p class="mb-0">
+                        Sudah punya akun? 
+                        <a href="/login" class="btn-back">
+                            <i class="bi bi-arrow-left-circle me-1"></i>Kembali ke Login
+                        </a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// LOGIKA FIELD RAHASIA (SINKRON ADMIN & STAFF)
+function toggleSecretField() {
+    const role = document.getElementById('roleSelect').value;
+    const secretArea = document.getElementById('secretArea');
+    const secretLabel = document.getElementById('secretLabel');
+    const secretInput = document.getElementById('secretCodeInput');
+
+    if (role === 'admin') {
+        secretArea.style.display = 'block';
+        secretLabel.innerText = 'Admin Secret Code';
+        secretInput.setAttribute('required', 'required');
+    } else if (role === 'staff') {
+        secretArea.style.display = 'block';
+        secretLabel.innerText = 'Staff Verification Code';
+        secretInput.setAttribute('required', 'required');
+    } else {
+        secretArea.style.display = 'none';
+        secretInput.removeAttribute('required');
+    }
+}
+
+// FUNGSI UMUM TOGGLE PASSWORD
+function setupPasswordToggle(toggleId, inputId) {
+    const toggle = document.querySelector(toggleId);
+    const input = document.querySelector(inputId);
+
+    toggle.addEventListener('click', function () {
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        this.classList.toggle('bi-eye');
+        this.classList.toggle('bi-eye-slash');
+    });
+}
+
+// Inisialisasi
+setupPasswordToggle('#toggleRegPassword', '#regPassword');
+setupPasswordToggle('#toggleSecretCode', '#secretCodeInput');
+</script>
+{% endblock %}

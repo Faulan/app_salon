@@ -1,0 +1,397 @@
+{% extends "layout.html" %}
+{% block title %}Kelola Layanan{% endblock %}
+{% block content %}
+
+<style>
+    /* 1. SINKRONISASI KOLOM INPUT (BORDER UNGU AWAL - SEARCH & MODAL TAMBAH) */
+    .toolbar-element, .search-wrapper, .form-control-custom-style {
+        height: 50px; 
+        border-radius: 12px !important;
+        display: flex;
+        align-items: center;
+        border: 1.5px solid var(--purple-main) !important; /* Ungu sejak awal */
+        transition: all 0.3s ease;
+        background-color: #ffffff;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+    textarea.form-control-custom-style {
+        height: auto !important;
+        padding: 12px 15px;
+    }
+
+    /* Efek Fokus Menebal (3px) Ungu */
+    .toolbar-element:focus, .search-wrapper:focus-within, .form-control-custom-style:focus {
+        border-width: 3px !important; 
+        box-shadow: 0 0 10px rgba(106, 27, 154, 0.2) !important;
+        outline: none;
+    }
+
+    /* 2. KHUSUS MODAL EDIT (TEMA KUNING EMAS) */
+    #editServiceModal .form-control-custom-style, 
+    #editServiceModal .toolbar-element {
+        border-color: #ffc107 !important;
+    }
+
+    #editServiceModal .form-control-custom-style:focus, 
+    #editServiceModal .toolbar-element:focus {
+        border-width: 3px !important;
+        border-color: #ffc107 !important;
+        box-shadow: 0 0 10px rgba(255, 193, 7, 0.2) !important;
+    }
+
+    .search-input-group {
+        background: white;
+        border-radius: 12px;
+        overflow: hidden;
+        border: none;
+        width: 100%;
+        display: flex;
+        align-items: center;
+    }
+
+    .form-control-custom {
+        border: none !important;
+        box-shadow: none !important;
+        height: 44px;
+        padding-left: 10px;
+        background: transparent !important;
+        width: 100%;
+        font-weight: 500;
+    }
+
+    /* 3. BUTTONS & UI */
+    .btn-tambah-layanan {
+        height: 50px;
+        border-radius: 12px;
+        background: linear-gradient(45deg, var(--purple-main), var(--pink-main));
+        color: white !important;
+        font-weight: bold;
+        border: none;
+        transition: 0.3s;
+    }
+
+    .btn-tambah-layanan:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(173, 20, 87, 0.4);
+    }
+
+    /* PERBAIKAN: STYLE TOMBOL PILIH FOTO (INTERAKTIF UNGU) */
+    .btn-pilih-foto-ungu {
+        border: 2px solid var(--purple-main) !important;
+        color: var(--purple-main) !important;
+        background: transparent;
+        transition: all 0.3s ease;
+        font-weight: bold;
+    }
+
+    /* Efek saat diklik (Aktif) jadi Ungu Solid */
+    .btn-pilih-foto-ungu.active {
+        background-color: var(--purple-main) !important;
+        color: white !important;
+    }
+
+    .text-purple { color: var(--purple-main); }
+    .service-row:hover { background-color: #fdf7ff; }
+    .btn-white { background: white; border: 1px solid #eee; }
+
+    .deskripsi-cell {
+        max-width: 300px;
+        word-wrap: break-word;
+        white-space: normal;
+        line-height: 1.5;
+    }
+</style>
+
+<div class="container-fluid py-4 text-start">
+    <div class="row mb-4 align-items-center">
+        <div class="col-md-8">
+            <h3 class="fw-bold text-purple"><i class="bi bi-collection-fill me-2"></i>Manajemen Menu Layanan</h3>
+            <p class="text-muted small">Atur katalog jasa kecantikan, kategori, dan penyesuaian harga salon.</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="card card-salon border-0 shadow-sm p-3 bg-white">
+                <small class="text-muted d-block uppercase fw-bold" style="font-size: 0.7rem;">TOTAL MENU</small>
+                <h3 class="fw-bold text-danger mb-0">{{ layanan|length }} Layanan</h3>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-salon shadow-sm border-0 mb-4 bg-white">
+        <div class="card-body p-3">
+            <div class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="search-wrapper">
+                        <div class="search-input-group">
+                            <i class="bi bi-search text-purple ms-2"></i>
+                            <input type="text" id="serviceSearch" class="form-control form-control-custom shadow-none" placeholder="Cari nama atau deskripsi...">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select id="categoryFilter" class="form-select toolbar-element fw-semibold text-muted shadow-none">
+                        <option value="">-- Semua Kategori --</option>
+                        <option value="Rambut">Rambut</option>
+                        <option value="Wajah">Wajah</option>
+                        <option value="Kuku">Kuku</option>
+                        <option value="Badan">Badan</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <button class="btn btn-tambah-layanan w-100 shadow-sm d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#addServiceModal">
+                        <i class="bi bi-plus-circle-fill me-2"></i> TAMBAH LAYANAN
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-salon shadow-sm border-0 overflow-hidden bg-white">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="serviceTable">
+                <thead class="table-light">
+                    <tr style="background-color: var(--purple-main); color: white;">
+                        <th class="ps-4 text-white">Layanan</th>
+                        <th class="text-white">Kategori</th>
+                        <th class="text-white">Harga</th>
+                        <th class="text-white">Deskripsi Lengkap</th>
+                        <th class="text-center text-white">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="serviceTableBody">
+                    {% for l in layanan %}
+                    <tr class="service-row" data-category="{{ l.kategori }}">
+                        <td class="ps-4">
+                            <div class="d-flex align-items-center">
+                                <img src="{{ url_for('static', filename='uploads/' + l.foto_katalog) if l.foto_katalog else url_for('static', filename='img/default-service.png') }}" 
+                                     alt="Foto" class="rounded shadow-sm me-3" style="width: 50px; height: 50px; object-fit: cover; border: 1px solid #f0f0f0;">
+                                <div class="fw-bold text-dark service-name">{{ l.nama_layanan }}</div>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-light text-dark border px-3 py-2 category-label">{{ l.kategori }}</span></td>
+                        <td><span class="fw-bold text-purple">Rp {{ "{:,.0f}".format(l.harga) }}</span></td>
+                        <td class="deskripsi-cell text-muted small">{{ l.deskripsi }}</td>
+                        <td class="text-center">
+                            <div class="btn-group shadow-sm rounded-pill overflow-hidden border bg-white">
+                                <button class="btn btn-sm btn-white text-info px-3" onclick="showServiceDetail('{{ l.nama_layanan }}', '{{ l.kategori }}', '{{ l.harga }}', '{{ l.deskripsi|replace('\r\n', ' ')|replace('\n', ' ') }}', '{{ l.foto_katalog }}')">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                                <button class="btn btn-sm btn-white text-warning px-3" onclick="editService('{{ l.id_layanan }}', '{{ l.nama_layanan }}', '{{ l.kategori }}', '{{ l.harga }}', '{{ l.deskripsi|replace('\r\n', ' ')|replace('\n', ' ') }}', '{{ l.foto_katalog }}')">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <a href="/admin/layanan/delete/{{ l.id_layanan }}" class="btn btn-sm btn-white text-danger px-3" onclick="return confirm('Hapus layanan {{ l.nama_layanan }}?')">
+                                    <i class="bi bi-trash-fill"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer bg-white py-3 border-0">
+            <span class="text-muted small">Ditemukan <b id="displayedCount" class="text-purple">{{ layanan|length }}</b> menu layanan aktif.</span>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 25px; overflow: hidden;">
+            <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle me-2"></i>Input Layanan Baru</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/layanan/add" method="POST" enctype="multipart/form-data">
+                <div class="modal-body text-start p-4">
+                    <div class="text-center mb-3">
+                        <img id="previewAdd" src="{{ url_for('static', filename='img/default-service.png') }}" class="rounded shadow-sm border" style="width: 120px; height: 120px; object-fit: cover;">
+                        <div class="mt-2">
+                            <label for="fileAdd" class="btn btn-sm btn-pilih-foto-ungu rounded-pill px-4 shadow-sm" id="btnUploadAdd" onclick="this.classList.add('active')">
+                                <i class="bi bi-camera-fill me-2"></i>Pilih Foto Katalog
+                            </label>
+                            <input type="file" name="foto" id="fileAdd" hidden accept="image/*" onchange="previewImage(this, 'previewAdd')" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Layanan</label>
+                        <input type="text" name="nama" class="form-control form-control-custom-style shadow-none" placeholder="Contoh: Creambath Strawberry" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Kategori</label>
+                        <select name="kategori" class="form-select toolbar-element shadow-none" required>
+                            <option value="">-- Pilih Kategori --</option>
+                            <option value="Rambut">Rambut</option>
+                            <option value="Wajah">Wajah</option>
+                            <option value="Kuku">Kuku</option>
+                            <option value="Badan">Badan</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Harga (Rp)</label>
+                        <input type="number" name="harga" class="form-control form-control-custom-style shadow-none" placeholder="100000" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Deskripsi</label>
+                        <textarea name="deskripsi" class="form-control form-control-custom-style shadow-none" rows="4" placeholder="Jelaskan detail layanan..." required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-tambah-layanan w-100 rounded-pill py-2 shadow">Simpan Layanan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editServiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 25px; overflow: hidden;">
+            <div class="modal-header text-dark border-0 py-3" style="background-color: #ffc107;">
+                <h5 class="modal-title fw-bold"><i class="bi bi-pencil-square me-2"></i>Perbarui Menu Layanan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/admin/layanan/update" method="POST" enctype="multipart/form-data">
+                <div class="modal-body p-4 text-start">
+                    <input type="hidden" name="id_layanan" id="edit_id">
+                    <div class="row text-center mb-4">
+                        <div class="col-6">
+                            <label class="small text-muted d-block mb-1">Foto Sekarang</label>
+                            <img id="currentFotoEdit" src="" class="rounded shadow-sm border" style="width: 90px; height: 90px; object-fit: cover;">
+                        </div>
+                        <div class="col-6">
+                            <label class="small text-muted d-block mb-1">Foto Baru</label>
+                            <img id="previewFotoEdit" src="{{ url_for('static', filename='img/default-service.png') }}" class="rounded shadow-sm border" style="width: 90px; height: 90px; object-fit: cover;">
+                        </div>
+                        <div class="col-12 mt-3">
+                            <label for="fileEdit" class="btn btn-sm btn-outline-warning rounded-pill px-3" onclick="this.classList.add('active')">Ganti Foto Katalog</label>
+                            <input type="file" name="foto" id="fileEdit" hidden accept="image/*" onchange="previewImage(this, 'previewFotoEdit')">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Nama Layanan</label>
+                        <input type="text" name="nama" id="edit_nama" class="form-control form-control-custom-style shadow-none" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Kategori</label>
+                        <select name="kategori" id="edit_kategori" class="form-select toolbar-element shadow-none" required>
+                            <option value="Rambut">Rambut</option>
+                            <option value="Wajah">Wajah</option>
+                            <option value="Kuku">Kuku</option>
+                            <option value="Badan">Badan</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Harga (Rp)</label>
+                        <input type="number" name="harga" id="edit_harga" class="form-control form-control-custom-style shadow-none" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Deskripsi</label>
+                        <textarea name="deskripsi" id="edit_deskripsi" class="form-control form-control-custom-style shadow-none" rows="4" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-warning w-100 py-2 fw-bold rounded-pill text-white shadow">Simpan Perubahan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detailServiceModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; overflow: hidden;">
+            <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <h6 class="modal-title fw-bold"><i class="bi bi-info-circle me-2"></i>Informasi Katalog Jasa</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0 text-start">
+                <img id="detFoto" src="" class="w-100" style="height: 220px; object-fit: cover;">
+                <div class="p-4">
+                    <label class="text-muted small d-block uppercase fw-bold" style="font-size: 0.65rem;">Nama Layanan</label>
+                    <h4 class="fw-bold text-dark mb-2" id="detNama"></h4>
+                    <span class="badge bg-light text-purple border" id="detKategori"></span>
+                    <hr class="my-3 opacity-10">
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="text-muted small d-block fw-bold" style="font-size: 0.65rem;">Harga Jasa</label>
+                            <h4 class="fw-bold text-success" id="detHarga"></h4>
+                        </div>
+                        <div class="col-12">
+                            <label class="text-muted small d-block fw-bold" style="font-size: 0.65rem;">Deskripsi Layanan</label>
+                            <p id="detDeskripsi" class="text-muted small mt-1" style="white-space: pre-wrap;"></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-secondary w-100 rounded-pill py-2 shadow-sm fw-bold" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const serviceSearch = document.getElementById('serviceSearch');
+const categoryFilter = document.getElementById('categoryFilter');
+
+function filterServiceTable() {
+    const searchText = serviceSearch.value.toLowerCase();
+    const filterValue = categoryFilter.value.toLowerCase();
+    const rows = document.querySelectorAll('.service-row');
+    let count = 0;
+    rows.forEach(row => {
+        const serviceName = row.querySelector('.service-name').innerText.toLowerCase();
+        const serviceDesc = row.querySelector('.deskripsi-cell').innerText.toLowerCase();
+        const serviceCategory = row.getAttribute('data-category').toLowerCase();
+        if ((serviceName.includes(searchText) || serviceDesc.includes(searchText)) && (filterValue === "" || serviceCategory === filterValue)) {
+            row.style.display = ''; count++;
+        } else { row.style.display = 'none'; }
+    });
+    document.getElementById('displayedCount').innerText = count;
+}
+
+serviceSearch.addEventListener('keyup', filterServiceTable);
+categoryFilter.addEventListener('change', filterServiceTable);
+
+function previewImage(input, targetId) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) { document.getElementById(targetId).src = e.target.result; }
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function showServiceDetail(nama, kategori, harga, deskripsi, foto) {
+    document.getElementById('detNama').innerText = nama;
+    document.getElementById('detKategori').innerText = kategori;
+    document.getElementById('detHarga').innerText = "Rp " + Number(harga).toLocaleString('id-ID');
+    document.getElementById('detDeskripsi').innerText = deskripsi;
+    document.getElementById('detFoto').src = foto ? "/static/uploads/" + foto : "/static/img/default-service.png";
+    new bootstrap.Modal(document.getElementById('detailServiceModal')).show();
+}
+
+function editService(id, nama, kategori, harga, deskripsi, foto) {
+    document.getElementById('edit_id').value = id;
+    document.getElementById('edit_nama').value = nama;
+    document.getElementById('edit_kategori').value = kategori;
+    document.getElementById('edit_harga').value = harga;
+    document.getElementById('edit_deskripsi').value = deskripsi;
+    const currentImg = foto ? "/static/uploads/" + foto : "/static/img/default-service.png";
+    document.getElementById('currentFotoEdit').src = currentImg;
+    document.getElementById('previewFotoEdit').src = "/static/img/default-service.png";
+    new bootstrap.Modal(document.getElementById('editServiceModal')).show();
+}
+
+// RESET TOMBOL SAAT MODAL DITUTUP
+document.querySelectorAll('.modal').forEach(modal => {
+    modal.addEventListener('hidden.bs.modal', function () {
+        const btnAdd = document.getElementById('btnUploadAdd');
+        if(btnAdd) btnAdd.classList.remove('active');
+        const btnEdit = document.querySelector('label[for="fileEdit"]');
+        if(btnEdit) btnEdit.classList.remove('active');
+    });
+});
+</script>
+{% endblock %}

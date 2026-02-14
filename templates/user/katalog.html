@@ -1,0 +1,234 @@
+{% extends "layout.html" %}
+{% block title %}Katalog Layanan{% endblock %}
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    /* 1. PERBAIKAN: TINGGI WADAH GAMBAR DITAMBAH (LEBIH PROPORSIONAL) */
+    .img-wrapper {
+        width: 100%;
+        height: 250px; /* Sesuai keinginan Anda */
+        background-color: #f8f9fa; 
+        overflow: hidden;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    .img-katalog-kotak {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;   
+    }
+
+    /* 2. CARD STYLING */
+    .card-salon {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card-salon:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(106, 27, 154, 0.1) !important;
+    }
+
+    .card-body {
+        display: flex;
+        flex-direction: column;
+        padding: 1.1rem;
+        flex-grow: 1;
+    }
+
+    /* Judul dan deskripsi dibuat rapat tanpa jarak renggang */
+    .card-title {
+        font-size: 1rem;
+        margin-bottom: 0.25rem; 
+    }
+
+    .description-box {
+        font-size: 0.75rem;
+        line-height: 1.3;
+        margin-bottom: 10px;
+        min-height: 35px;
+    }
+
+    /* 3. STYLING INPUT & BADGE */
+    .border-purple {
+        border: 1.2px solid var(--purple-main) !important;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        background-color: #f3e5f5; 
+    }
+
+    /* PERBAIKAN: EFEK HOVER/FOKUS UNGU (SINKRON DENGAN REGISTER.HTML) */
+    .border-purple:focus {
+        border-color: var(--purple-main) !important;
+        box-shadow: 0 0 0 0.25rem rgba(106, 27, 154, 0.15) !important;
+        background-color: #fff !important;
+        outline: 0;
+    }
+    
+    .text-purple-custom {
+        color: var(--purple-main) !important;
+    }
+
+    .badge-kotak {
+        position: absolute;
+        padding: 5px 12px;
+        border-radius: 6px;
+        font-weight: bold;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        font-size: 0.7rem;
+        z-index: 2;
+    }
+
+    /* 4. STYLE BARU: PRATINJAU FOTO PELAYAN */
+    .staf-preview-box {
+        display: none; /* Awalnya sembunyi */
+        align-items: center;
+        gap: 12px;
+        background: #fdfbff;
+        padding: 10px;
+        border-radius: 12px;
+        border: 1.5px dashed var(--purple-main);
+        margin-top: 10px;
+    }
+
+    .img-staf-circle {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2px solid white;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .mt-auto-form {
+        margin-top: auto;
+    }
+</style>
+
+<div class="text-center mb-4 text-start">
+    <h3 class="fw-bold" style="color: var(--purple-main);">✨ Katalog Layanan ✨</h3>
+    <p class="text-muted small">Pilih layanan dan personel favorit Anda.</p>
+</div>
+
+<div class="row">
+    {% for l in layanan %}
+    <div class="col-xl-3 col-lg-4 col-md-6 mb-4">
+        <div class="card card-salon h-100 shadow-sm border-0 overflow-hidden bg-white text-start">
+            <div class="position-relative img-wrapper">
+                <img src="{{ url_for('static', filename='uploads/' + l.foto_katalog) if l.foto_katalog else url_for('static', filename='img/default-service.png') }}" 
+                     class="img-katalog-kotak" alt="{{ l.nama_layanan }}">
+                
+                <span class="badge-kotak position-absolute top-0 end-0 bg-white text-danger m-2">
+                    Rp {{ "{:,.0f}".format(l.harga) }}
+                </span>
+                
+                <span class="badge-kotak position-absolute top-0 start-0 bg-white text-purple-custom m-2">
+                    {{ l.kategori }}
+                </span>
+            </div>
+            
+            <div class="card-body">
+                <h6 class="card-title fw-bold text-purple-custom">{{ l.nama_layanan }}</h6>
+                <div class="description-box text-muted small">
+                    {{ l.deskripsi }}
+                </div>
+                
+                <hr class="my-2 opacity-10">
+                
+                <form action="/process_booking" method="POST" class="mt-auto-form" onsubmit="return validateBooking(this)">
+                    <input type="hidden" name="id_layanan" value="{{ l.id_layanan }}">
+                    
+                    <div class="mb-2">
+                        <label class="fw-bold text-dark" style="font-size: 0.7rem;">Staf Pelayan:</label>
+                        <select name="id_pelayan" class="form-select form-select-sm border-purple shadow-none" 
+                                onchange="updateStafPreview(this, '{{ l.id_layanan }}')" required>
+                            <option value="" disabled selected>-- Pilih Personel --</option>
+                            {% for p in pelayan %}
+                                {% if p.status_aktif == 'tersedia' %}
+                                <option value="{{ p.id_pelayan }}" 
+                                        data-foto="{{ url_for('static', filename='uploads/' + p.foto_pelayan) if p.foto_pelayan else url_for('static', filename='img/default-user.png') }}"
+                                        data-spec="{{ p.spesialisasi }}">
+                                    {{ p.nama_pelayan }}
+                                </option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+
+                        <div id="preview-box-{{ l.id_layanan }}" class="staf-preview-box">
+                            <img src="" id="preview-img-{{ l.id_layanan }}" class="img-staf-circle">
+                            <div>
+                                <small class="fw-bold text-purple d-block" id="preview-nama-{{ l.id_layanan }}" style="line-height: 1.2;"></small>
+                                <small class="text-muted" style="font-size: 0.6rem;" id="preview-spec-{{ l.id_layanan }}"></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-1 mb-3 mt-2">
+                        <div class="col-6">
+                            <label class="fw-bold text-dark" style="font-size: 0.7rem;">Tanggal:</label>
+                            <input type="date" name="tgl" class="form-control form-control-sm border-purple shadow-none" required min="{{ current_date }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="fw-bold text-dark" style="font-size: 0.7rem;">Jam (09:00 - 20:00):</label>
+                            <input type="time" name="jam" class="form-control form-control-sm border-purple shadow-none" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-salon w-100 py-2 fw-bold shadow-sm btn-sm">
+                        Booking Sekarang
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<script>
+// 1. Fungsi Menampilkan Foto Pelayan Secara Dinamis
+function updateStafPreview(select, idLayanan) {
+    const selectedOption = select.options[select.selectedIndex];
+    const foto = selectedOption.getAttribute('data-foto');
+    const spec = selectedOption.getAttribute('data-spec');
+    const nama = selectedOption.text;
+
+    const previewBox = document.getElementById('preview-box-' + idLayanan);
+    const previewImg = document.getElementById('preview-img-' + idLayanan);
+    const previewNama = document.getElementById('preview-nama-' + idLayanan);
+    const previewSpec = document.getElementById('preview-spec-' + idLayanan);
+
+    if (foto) {
+        previewBox.style.display = 'flex'; // Tampilkan box
+        previewImg.src = foto;
+        previewNama.innerText = nama;
+        previewSpec.innerText = spec;
+    }
+}
+
+// 2. Fungsi Validasi Jam Kerja (09:00 s/d 20:00) Menggunakan SweetAlert2
+function validateBooking(form) {
+    const jamInput = form.querySelector('input[name="jam"]').value;
+    const jamBuka = "09:00";
+    const jamTutup = "20:00";
+
+    if (jamInput < jamBuka || jamInput > jamTutup) {
+        // Tampilan Pop-up yang Jauh Lebih Menarik
+        Swal.fire({
+            icon: 'error',
+            title: 'Jam Operasional Tutup',
+            text: 'Maaf, Glamour Salon hanya menerima pesanan antara pukul 09:00 pagi hingga 20:00 malam.',
+            confirmButtonColor: '#6a1b9a', // Menggunakan warna ungu utama salon Anda
+            background: '#fff',
+            backdrop: `rgba(106, 27, 154, 0.2)`
+        });
+        return false; // Batalkan submit
+    }
+    return true; // Lanjut submit
+}
+</script>
+
+{% endblock %}

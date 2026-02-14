@@ -1,0 +1,418 @@
+{% extends "layout.html" %}
+{% block title %}Kasir & Antrian Aktif{% endblock %}
+{% block content %}
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<style>
+    /* 1. SINKRONISASI TOTAL SEMUA KOLOM INPUT (BORDER UNGU AWAL) */
+    .toolbar-element, 
+    .search-wrapper, 
+    .modal-body .form-control, 
+    .modal-body .form-select, 
+    #cashInput {
+        height: 50px;
+        border-radius: 12px !important;
+        background-color: #ffffff;
+        transition: all 0.3s ease;
+        border: 1.5px solid var(--purple-main) !important;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+    }
+
+    /* Efek Fokus Menebal (3px) UNGU SOLID */
+    .toolbar-element:focus, 
+    .toolbar-element:focus-within,
+    .search-wrapper:focus-within, 
+    .modal-body .form-control:focus, 
+    .modal-body .form-select:focus, 
+    #cashInput:focus {
+        border-width: 3px !important; 
+        border-color: var(--purple-main) !important;
+        box-shadow: 0 0 10px rgba(106, 27, 154, 0.2) !important;
+        outline: none;
+    }
+
+    .search-input-group, .search-input-group span, .search-input-group input {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .form-control-custom {
+        border: none !important;
+        box-shadow: none !important;
+        height: 44px;
+        padding-left: 10px;
+        background: transparent !important;
+        width: 100%;
+        font-weight: 500;
+    }
+
+    /* 2. PERBAIKAN IKON JAM & TANGGAL */
+    input[type="date"], input[type="time"] {
+        position: relative;
+        padding-right: 40px !important; 
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator,
+    input[type="time"]::-webkit-calendar-picker-indicator {
+        position: absolute;
+        right: 12px;
+        margin: 0;
+        cursor: pointer;
+        padding: 5px;
+        filter: invert(18%) sepia(85%) saturate(2441%) hue-rotate(268deg) brightness(91%) contrast(101%);
+        z-index: 2;
+    }
+
+    /* 3. BUTTONS & UI COMPONENTS */
+    .btn-tambah-booking {
+        height: 50px; border-radius: 12px;
+        background: linear-gradient(45deg, var(--purple-main), var(--pink-main));
+        color: white !important; font-weight: bold; border: none; transition: 0.3s;
+    }
+    .btn-tambah-booking:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(173, 20, 87, 0.4); }
+    .bg-pink-light { background-color: #fdf2f6; color: #ad1457; border: 1px solid #f8d7da; }
+    .text-pink-custom { color: #ad1457 !important; }
+    .btn-white { background: white; border: 1px solid #eee; }
+    .booking-row:hover { background-color: #fdf7ff; }
+
+    /* 4. LOGIKA TRANSISI PANEL KASIR */
+    .booking-container { display: flex; width: 100%; gap: 0; transition: all 0.5s ease; align-items: flex-start; overflow: hidden; }
+    #tableSection { flex: 1; width: 100%; transition: all 0.5s ease; }
+    #cashierSection { width: 0; flex: 0; opacity: 0; visibility: hidden; overflow: hidden; transform: translateX(50px); transition: all 0.5s ease; }
+    .cashier-active #tableSection { flex: 0 0 66%; margin-right: 20px; }
+    .cashier-active #cashierSection { flex: 0 0 32%; width: auto; opacity: 1; visibility: visible; transform: translateX(0); }
+</style>
+
+<div class="container-fluid py-4">
+    <div id="mainWrapper" class="booking-container">
+        <div id="tableSection" class="text-start">
+            <div class="row mb-4">
+                <div class="col-md-8">
+                    <h3 class="fw-bold" style="color: var(--purple-main);"><i class="bi bi-calendar-check-fill me-2"></i>Antrian Salon Aktif</h3>
+                    <p class="text-muted small">Kelola proses layanan hari ini dan konfirmasi pembayaran pelanggan di kasir.</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="card card-salon border-0 shadow-sm p-3 bg-white">
+                        <small class="text-muted d-block uppercase fw-bold" style="font-size: 0.7rem;">ANTRIAN BERJALAN</small>
+                        <h3 class="fw-bold text-pink-custom mb-0">{{ bookings|length }} Antrian</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-salon shadow-sm border-0 mb-4 bg-white">
+                <div class="card-body p-3">
+                    <div class="row g-2 align-items-center">
+                        <div class="col-md-5">
+                            <div class="search-wrapper">
+                                <div class="input-group search-input-group">
+                                    <span class="input-group-text"><i class="bi bi-search text-purple"></i></span>
+                                    <input type="text" id="searchInput" class="form-control form-control-custom shadow-none" placeholder="Cari nama pelanggan...">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <select id="statusFilter" class="form-select toolbar-element fw-semibold text-muted shadow-none">
+                                <option value="">-- Semua Status --</option>
+                                <option value="Menunggu">Menunggu</option>
+                                <option value="Diterima">Diterima</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <button class="btn btn-tambah-booking w-100 shadow-sm d-flex align-items-center justify-content-center" data-bs-toggle="modal" data-bs-target="#addBookingModal">
+                                <i class="bi bi-plus-circle-fill me-2"></i> TAMBAH
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-salon shadow-sm border-0 overflow-hidden bg-white">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="bookingTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4">Pelanggan</th>
+                                <th>Jadwal</th>
+                                <th>Layanan & Staf</th>
+                                <th>Status</th>
+                                <th class="text-center">Aksi Kasir</th>
+                            </tr>
+                        </thead>
+                        <tbody id="bookingTableBody">
+                            {% for b in bookings %}
+                            {% if b.status != 'Selesai' %}
+                            <tr class="booking-row" data-status="{{ b.status }}" data-id="{{ b.id_booking }}">
+                                <td class="ps-4">
+                                    <div class="fw-bold text-dark">{{ b.pelanggan }}</div>
+                                    <small class="text-muted"><i class="bi bi-whatsapp me-1"></i>{{ b.no_hp }}</small>
+                                </td>
+                                <td>
+                                    <div class="fw-semibold small">{{ b.tgl_booking }}</div>
+                                    <small class="text-muted">{{ b.jam_booking }} WIB</small>
+                                </td>
+                                <td>
+                                    <span class="badge bg-pink-light text-pink mb-1">{{ b.nama_layanan }}</span>
+                                    <div class="small">Staf: <b>{{ b.nama_pelayan }}</b></div>
+                                </td>
+                                <td>
+                                    <span class="badge {% if b.status == 'Menunggu' %}bg-warning text-dark{% elif b.status == 'Diterima' %}bg-primary text-white{% else %}bg-danger text-white{% endif %} rounded-pill px-3 py-2">
+                                        {{ b.status }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex align-items-center justify-content-center">
+                                        {% if b.status == 'Menunggu' %}
+                                            <div class="btn-group shadow-sm rounded-pill overflow-hidden border me-2">
+                                                <a href="/update_status/{{ b.id_booking }}/Diterima" class="btn btn-sm btn-white text-primary px-3 fw-bold bg-white">Terima</a>
+                                                <a href="/update_status/{{ b.id_booking }}/Ditolak" class="btn btn-sm btn-white text-secondary px-3 bg-white" onclick="return confirm('Tolak antrian ini?')">Tolak</a>
+                                            </div>
+                                        {% elif b.status == 'Diterima' %}
+                                            <button class="btn btn-sm btn-success px-4 fw-bold rounded-pill shadow-sm me-2" 
+                                                    onclick="bukaKasir('{{ b.id_booking }}', '{{ b.pelanggan }}', '{{ b.nama_layanan }}', '{{ b.harga|default(0) }}', '{{ b.nama_pelayan }}')">
+                                                BAYAR <i class="bi bi-chevron-right"></i>
+                                            </button>
+                                        {% endif %}
+                                        <a href="/admin/booking/delete/{{ b.id_booking }}" class="btn btn-sm btn-outline-danger border-0 rounded-circle" onclick="return confirm('Hapus antrian ini?')">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="card-footer bg-white py-3 border-0">
+                    <span class="text-muted small">Menampilkan <b id="displayedCount" class="text-pink-custom">{{ bookings|length }}</b> data antrian aktif.</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="cashierSection">
+            <div class="card card-salon border-0 shadow-lg sticky-top" style="top: 20px; border-top: 5px solid #198754 !important; border-radius: 15px;">
+                <div class="card-header bg-white border-0 pt-4 px-4 d-flex justify-content-between align-items-center">
+                    <h5 class="fw-bold mb-0 text-success"><i class="bi bi-cart-check-fill me-2"></i>PANEL KASIR</h5>
+                    <button class="btn-close" onclick="tutupKasir()"></button>
+                </div>
+                <div class="card-body p-4 text-start">
+                    <div class="mb-4">
+                        <label class="text-muted small d-block uppercase fw-bold" style="font-size: 0.65rem;">PELANGGAN</label>
+                        <h5 id="posNama" class="fw-bold text-dark">-</h5>
+                        <label class="text-muted small d-block mt-3 uppercase fw-bold" style="font-size: 0.65rem;">LAYANAN</label>
+                        <p id="posLayanan" class="mb-0 text-purple fw-semibold">-</p>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 mb-4 border-start border-4 border-success">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="text-muted fw-bold">Total Tagihan</span>
+                            <h3 id="posTotalText" class="fw-bold mb-0 text-dark">Rp 0</h3>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">METODE PEMBAYARAN</label>
+                        <div class="d-flex gap-2 mb-3">
+                            <input type="radio" class="btn-check" name="pay_method" id="pay_cash" value="Tunai" checked onchange="togglePayInput(this.value)">
+                            <label class="btn btn-outline-success w-100 py-2 fw-bold" for="pay_cash">TUNAI</label>
+                            <input type="radio" class="btn-check" name="pay_method" id="pay_qris" value="QRIS" onchange="togglePayInput(this.value)">
+                            <label class="btn btn-outline-primary w-100 py-2 fw-bold" for="pay_qris">QRIS</label>
+                            <input type="radio" class="btn-check" name="pay_method" id="pay_transfer" value="Transfer" onchange="togglePayInput(this.value)">
+                            <label class="btn btn-outline-info w-100 py-2 fw-bold" for="pay_transfer">TRANSFER</label>
+                        </div>
+                    </div>
+
+                    <div id="cashInputArea">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small">UANG DITERIMA (Rp)</label>
+                            <input type="number" id="cashInput" class="form-control form-control-lg shadow-sm" placeholder="0">
+                        </div>
+                        <div class="mb-4 text-end">
+                            <label class="form-label fw-bold small d-block text-start">KEMBALIAN</label>
+                            <h2 id="changeText" class="fw-bold text-danger">Rp 0</h2>
+                        </div>
+                    </div>
+
+                    <div id="digitalInputArea" class="d-none">
+                        <div class="alert alert-info border-0 shadow-sm py-3" style="border-radius: 12px;">
+                            <small class="fw-bold"><i class="bi bi-info-circle-fill"></i> Konfirmasi:</small>
+                            <p class="small mb-0 mt-1 text-muted">Pastikan dana telah masuk ke rekening sebelum konfirmasi.</p>
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="prosesLunas()" id="posConfirmBtn" class="btn btn-success btn-lg w-100 fw-bold shadow disabled py-3 mt-2" style="border-radius: 12px;">
+                        <i class="bi bi-check-circle-fill me-1"></i> KONFIRMASI LUNAS
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addBookingModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 card-salon shadow-lg" style="border-radius: 25px; overflow: hidden;">
+            <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <h5 class="modal-title fw-bold"><i class="bi bi-plus-circle-fill me-2"></i>Tambah Antrian Manual</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/process_booking" method="POST" onsubmit="return validateBookingManual(this)">
+                <div class="modal-body text-start p-4">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Pelanggan</label>
+                        <select name="id_user_manual" class="form-select toolbar-element" required>
+                            <option value="" disabled selected>-- Pilih Member --</option>
+                            {% for p in daftar_pelanggan %}
+                            <option value="{{ p.id_user }}">{{ p.nama_lengkap }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Layanan</label>
+                        <select name="id_layanan" class="form-select toolbar-element" required>
+                            <option value="" disabled selected>-- Pilih Jasa Salon --</option>
+                            {% for l in layanan %}
+                            <option value="{{ l.id_layanan }}">{{ l.nama_layanan }} (Rp {{ "{:,.0f}".format(l.harga|default(0)) }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Pilih Staf</label>
+                        <select name="id_pelayan" class="form-select toolbar-element" required>
+                            <option value="" disabled selected>-- Pilih Hairstylist --</option>
+                            {% for p in pelayan %}
+                            <option value="{{ p.id_pelayan }}">{{ p.nama_pelayan }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label small fw-bold">Tanggal</label>
+                            <input type="date" name="tgl" class="form-control toolbar-element" required>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label small fw-bold">Jam (09:00 - 20:00)</label>
+                            <input type="time" name="jam" class="form-control toolbar-element" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-tambah-booking w-100 rounded-pill py-2 shadow">Simpan Ke Antrian</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% include 'components/struk_modal.html' %}
+
+<script>
+    let currentHarga = 0, currentBookingId = 0, currentNama = "", currentLayanan = "", currentPelayan = "";
+
+    // 1. FUNGSI URUTAN DATA TERBARU (DI ATAS)
+    document.addEventListener('DOMContentLoaded', function() {
+        const tableBody = document.getElementById('bookingTableBody');
+        const rows = Array.from(tableBody.querySelectorAll('.booking-row'));
+        
+        // Urutkan berdasarkan ID booking secara descending (terbaru di atas)
+        rows.sort((a, b) => parseInt(b.dataset.id) - parseInt(a.dataset.id));
+        
+        // Masukkan kembali baris yang sudah diurutkan ke tabel
+        rows.forEach(row => tableBody.appendChild(row));
+    });
+
+    function validateBookingManual(form) {
+        const jamInput = form.querySelector('input[name="jam"]').value;
+        if (jamInput < "09:00" || jamInput > "20:00") {
+            Swal.fire({
+                icon: 'error', title: 'Jam Operasional Tutup',
+                text: 'Salon beroperasi antara pukul 09:00 s/d 20:00.',
+                confirmButtonColor: '#6a1b9a'
+            });
+            return false;
+        }
+        return true;
+    }
+
+    function bukaKasir(id, nama, layanan, harga, pelayan) {
+        currentHarga = parseInt(harga); currentBookingId = id; currentNama = nama; currentLayanan = layanan; currentPelayan = pelayan;
+        document.getElementById('mainWrapper').classList.add('cashier-active');
+        document.getElementById('posNama').innerText = nama; 
+        document.getElementById('posLayanan').innerText = layanan;
+        document.getElementById('posTotalText').innerText = "Rp " + currentHarga.toLocaleString('id-ID');
+        document.getElementById('cashInput').value = ""; 
+        togglePayInput('Tunai');
+    }
+
+    function tutupKasir() { document.getElementById('mainWrapper').classList.remove('cashier-active'); }
+
+    function togglePayInput(method) {
+        const cashArea = document.getElementById('cashInputArea'), digitalArea = document.getElementById('digitalInputArea'), btn = document.getElementById('posConfirmBtn');
+        if (method === 'Tunai') { cashArea.classList.remove('d-none'); digitalArea.classList.add('d-none'); validateCash(); } 
+        else { cashArea.classList.add('d-none'); digitalArea.classList.remove('d-none'); btn.classList.remove('disabled'); }
+    }
+
+    function validateCash() {
+        const cash = parseInt(document.getElementById('cashInput').value) || 0;
+        const kembalian = cash - currentHarga;
+        const display = document.getElementById('changeText'), btn = document.getElementById('posConfirmBtn');
+        if (cash <= 0) { display.innerText = "Rp 0"; btn.classList.add('disabled'); } 
+        else if (kembalian >= 0) { display.innerText = "Rp " + kembalian.toLocaleString('id-ID'); display.className = "fw-bold text-success"; btn.classList.remove('disabled'); } 
+        else { display.innerText = "Uang Kurang!"; display.className = "fw-bold text-danger"; btn.classList.add('disabled'); }
+    }
+
+    document.getElementById('cashInput').addEventListener('keyup', validateCash);
+
+    // 2. LOGIKA UTAMA: PROSES LUNAS & SINKRONISASI DATABASE (BAYAR & KEMBALI)
+    function prosesLunas() {
+        const metode = document.querySelector('input[name="pay_method"]:checked').value;
+        const cashInput = document.getElementById('cashInput').value;
+        const bayar = parseInt(cashInput) || 0;
+        const kembali = bayar - currentHarga;
+
+        // Kirim data ke tampilan struk_modal.html
+        document.getElementById('strukNama').innerText = currentNama; 
+        document.getElementById('strukLayanan').innerText = currentLayanan;
+        document.getElementById('strukPelayan').innerText = currentPelayan; 
+        document.getElementById('strukTotal').innerText = "Rp " + currentHarga.toLocaleString('id-ID');
+        document.getElementById('strukMetode').innerText = metode;
+
+        const tunaiDetail = document.getElementById('strukTunaiDetail');
+        if (metode === 'Tunai') {
+            tunaiDetail.style.display = 'block';
+            document.getElementById('strukBayar').innerText = "Rp " + bayar.toLocaleString('id-ID');
+            document.getElementById('strukKembalian').innerText = "Rp " + kembali.toLocaleString('id-ID');
+        } else {
+            tunaiDetail.style.display = 'none';
+        }
+
+        // Tampilkan Modal Struk (Preview)
+        var myModal = new bootstrap.Modal(document.getElementById('strukModal')); 
+        myModal.show();
+        
+        // SINKRONISASI: Kirim data uang bayar & kembalian ke backend agar tersimpan permanen
+        document.getElementById('strukModal').addEventListener('hidden.bs.modal', function () {
+            window.location.href = `/update_status/${currentBookingId}/Selesai?metode=${metode}&bayar=${bayar}&kembali=${kembali}`;
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('searchInput'), statusFilter = document.getElementById('statusFilter'), rows = document.querySelectorAll('.booking-row');
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase(), filterValue = statusFilter.value;
+            rows.forEach(row => {
+                const matchSearch = row.innerText.toLowerCase().includes(searchTerm), matchStatus = filterValue === "" || row.getAttribute('data-status') === filterValue;
+                row.style.display = (matchSearch && matchStatus) ? "" : "none";
+            });
+            document.getElementById('displayedCount').innerText = Array.from(rows).filter(r => r.style.display !== "none").length;
+        }
+        searchInput.addEventListener('keyup', filterTable);
+        statusFilter.addEventListener('change', filterTable);
+    });
+</script>
+
+{% endblock %}

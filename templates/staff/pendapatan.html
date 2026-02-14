@@ -1,0 +1,351 @@
+{% extends "layout.html" %}
+{% block title %}Rekap Pendapatan Saya{% endblock %}
+
+{% block content %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+<style>
+    /* 1. SINKRONISASI KOLOM INPUT (BORDER UNGU AWAL) */
+    .toolbar-element, .search-wrapper, input[type="date"].form-control-custom {
+        height: 50px;
+        border-radius: 12px !important;
+        display: flex;
+        align-items: center;
+        border: 1.5px solid var(--purple-main) !important;
+        transition: all 0.3s ease;
+        background-color: #ffffff;
+        padding: 0 15px;
+        overflow: hidden;
+    }
+
+    .toolbar-element:focus, .search-wrapper:focus-within, input[type="date"].form-control-custom:focus {
+        border-width: 3px !important; 
+        box-shadow: 0 0 10px rgba(106, 27, 154, 0.2) !important;
+        outline: none;
+    }
+
+    .form-control-custom {
+        border: none !important;
+        box-shadow: none !important;
+        height: 44px;
+        padding-left: 10px;
+        background: transparent !important;
+        width: 100%;
+        font-weight: 500;
+    }
+
+    /* 2. GAYA KALENDER RAPI */
+    input[type="date"].form-control-custom { position: relative; padding-right: 40px !important; }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+        position: absolute;
+        right: 12px;
+        filter: invert(18%) sepia(85%) saturate(2441%) hue-rotate(268deg) brightness(91%) contrast(101%);
+    }
+
+    /* 3. BUTTON RESET CUSTOM (SINKRON RIWAYAT) */
+    .btn-reset-custom {
+        height: 50px;
+        border-radius: 12px;
+        background-color: white;
+        color: #ff5252;
+        font-weight: bold;
+        border: 2px solid #ff5252;
+        transition: 0.3s;
+    }
+    .btn-reset-custom:hover { 
+        background-color: #ff5252; 
+        color: white; 
+        transform: translateY(-2px); 
+    }
+
+    /* 4. BUTTON UNDUH LAPORAN */
+    .btn-excel-custom {
+        height: 50px; border-radius: 12px;
+        background: linear-gradient(45deg, #198754, #28a745);
+        color: white !important; font-weight: bold; border: none; transition: 0.3s;
+    }
+    .btn-excel-custom:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4); }
+
+    /* Tema Ungu Laporan */
+    .report-header {
+        border-left: 10px solid var(--purple-main) !important;
+        background: white;
+        border-radius: 15px;
+    }
+
+    /* Badges Metode */
+    .badge-method { font-size: 0.75rem; padding: 6px 15px; border-radius: 50px; font-weight: bold; }
+    .bg-cash { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+    .bg-qris { background-color: #e3f2fd; color: #1565c0; border: 1px solid #bbdefb; }
+    .bg-bank { background-color: #f3e5f5; color: #7b1fa2; border: 1px solid #e1bee7; }
+</style>
+
+<div class="container-fluid py-4 text-start">
+    <div class="report-header shadow-sm d-flex justify-content-between align-items-center p-4 mb-4">
+        <div>
+            <h2 class="fw-bold text-purple mb-0">REKAP PENDAPATAN SAYA</h2>
+            <p class="text-muted mb-0">Laporan rincian hasil kerja dan omzet layanan yang telah Anda selesaikan.</p>
+        </div>
+        <div>
+            <button onclick="exportPendapatanExcel()" class="btn btn-excel-custom shadow-sm px-4">
+                <i class="bi bi-file-earmark-excel-fill me-2"></i>EKSPOR LAPORAN
+            </button>
+        </div>
+    </div>
+
+    <div class="row mb-4 g-3">
+        <div class="col-md-3">
+            <div class="card card-salon border-0 shadow-sm p-3 bg-white h-100 text-center" style="border-left: 5px solid #198754 !important;">
+                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.65rem;">Total Pendapatan</small>
+                <h3 class="fw-bold text-success mb-0" id="totalPribadi">Rp {{ "{:,.0f}".format(total_bulan_ini or 0) }}</h3>
+            </div>
+        </div>
+
+        <div class="col-md-9">
+            <div class="card card-salon p-3 border-0 shadow-sm bg-white">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                        <div class="search-wrapper">
+                            <i class="bi bi-search text-purple me-2"></i>
+                            <input type="text" id="incomeSearch" class="form-control form-control-custom shadow-none" placeholder="Cari pelanggan/layanan...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <input type="date" id="incomeDate" class="form-control form-control-custom shadow-none">
+                    </div>
+                    <div class="col-md-3">
+                        <select id="methodFilter" class="form-select toolbar-element shadow-none fw-semibold text-muted">
+                            <option value="">-- Semua Metode --</option>
+                            <option value="Tunai">Tunai</option>
+                            <option value="QRIS">QRIS</option>
+                            <option value="Transfer">Transfer</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button onclick="resetIncomeFilter()" class="btn btn-reset-custom w-100 fw-bold">
+                            <i class="bi bi-arrow-clockwise me-1"></i>RESET
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-salon shadow-sm border-0 overflow-hidden bg-white">
+        <div class="card-header bg-white py-3 border-0 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark"><i class="bi bi-journal-text me-2"></i>Rincian Transaksi Selesai</h5>
+            <span class="badge bg-danger text-white rounded-pill px-3 py-2 fw-bold shadow-sm">
+                TOTAL DATA: <span id="dataCount">{{ riwayat|length }}</span>
+            </span>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="incomeTable">
+                <thead class="table-light">
+                    <tr style="background-color: var(--purple-main); color: white;">
+                        <th class="text-white text-center">No</th>
+                        <th class="text-white">Tanggal & Jam</th>
+                        <th class="text-white">Pelanggan</th>
+                        <th class="text-white">Layanan</th>
+                        <th class="text-center text-white">Metode</th>
+                        <th class="text-end text-white">Nilai Transaksi</th>
+                        <th class="text-center text-white">Aksi</th>
+                    </tr>
+                </thead>
+                <tbody id="incomeTableBody">
+                    {% for r in riwayat %}
+                    <tr class="income-row" data-date="{{ r.tgl_booking }}" data-method="{{ r.metode_bayar }}">
+                        <td class="text-center text-muted small">{{ loop.index }}</td>
+                        <td>
+                            <div class="fw-bold date-val">{{ r.tgl_booking }}</div>
+                            <small class="text-muted jam-val">{{ r.jam_booking }} WIB</small>
+                        </td>
+                        <td class="fw-bold text-dark cust-val">{{ r.pelanggan }}</td>
+                        <td class="service-val text-purple fw-semibold">{{ r.nama_layanan }}</td>
+                        <td class="text-center">
+                            <span class="badge-method method-val {% if r.metode_bayar == 'Tunai' %}bg-cash{% elif r.metode_bayar == 'QRIS' %}bg-qris{% else %}bg-bank{% endif %}">
+                                {{ r.metode_bayar|upper if r.metode_bayar else '-' }}
+                            </span>
+                        </td>
+                        <td class="text-end fw-bold text-success price-val" data-amount="{{ r.total_bayar }}">
+                            Rp {{ "{:,.0f}".format(r.total_bayar) }}
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group shadow-sm rounded-pill overflow-hidden border bg-white">
+                                <button class="btn btn-sm text-info px-3" onclick="showDetail('{{ r.pelanggan }}', '{{ r.tgl_booking }}', '{{ r.jam_booking }}', '{{ r.nama_layanan }}', '{{ session['username'] }}', '{{ r.total_bayar }}', '{{ r.metode_bayar }}', '{{ r.uang_bayar }}', '{{ r.kembalian }}')">
+                                    <i class="bi bi-eye-fill"></i>
+                                </button>
+                                <button class="btn btn-sm text-primary px-3 border-start" onclick="showInvoice('{{ r.pelanggan }}', '{{ r.nama_layanan }}', '{{ session['username'] }}', '{{ r.total_bayar }}', '{{ r.metode_bayar }}', '{{ r.tgl_booking }}', '{{ r.uang_bayar }}', '{{ r.kembalian }}')">
+                                    <i class="bi bi-receipt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5 text-muted">Belum ada rincian transaksi masuk.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 20px;">
+            <div class="modal-header text-white border-0 py-3" style="background: linear-gradient(45deg, var(--purple-main), var(--pink-main));">
+                <h6 class="modal-title fw-bold"><i class="bi bi-info-circle me-2"></i>Detail Transaksi Saya</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-start">
+                <div class="mb-4">
+                    <label class="text-muted small d-block uppercase fw-bold" style="font-size: 0.65rem;">Nama Pelanggan</label>
+                    <h5 class="fw-bold text-dark mb-0" id="detNama">-</h5>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-6 border-end">
+                        <label class="text-muted small d-block fw-bold" style="font-size: 0.65rem;">Tanggal</label>
+                        <h6 class="fw-bold text-dark mb-0" id="detTgl">-</h6>
+                    </div>
+                    <div class="col-6 ps-3">
+                        <label class="text-muted small d-block fw-bold" style="font-size: 0.65rem;">Jam</label>
+                        <h6 class="fw-bold text-dark mb-0" id="detJam">-</h6>
+                    </div>
+                </div>
+                <hr class="my-3 opacity-10">
+                <div class="mb-3">
+                    <label class="text-muted small d-block fw-bold" style="font-size: 0.65rem;">Layanan</label>
+                    <h6 class="fw-bold text-purple mb-0" id="detLayanan">-</h6>
+                </div>
+                <div id="detPaymentArea" class="mt-4 p-3 bg-light rounded-3 border-start border-4 border-success">
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small fw-bold">METODE</span>
+                        <span class="fw-bold text-dark" id="detMetodeText">-</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <span class="text-muted small fw-bold">TOTAL</span>
+                        <span class="fw-bold text-dark" id="detTotal">Rp 0</span>
+                    </div>
+                    <div id="detCashDetail">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small fw-bold">DIBAYAR</span>
+                            <span class="fw-bold text-dark" id="detBayar">Rp 0</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small fw-bold">KEMBALIAN</span>
+                            <span class="fw-bold text-success" id="detKembali">Rp 0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4 pt-0">
+                <button type="button" class="btn btn-secondary w-100 rounded-pill py-2 shadow-sm fw-bold" data-bs-dismiss="modal">Tutup</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include 'components/struk_modal.html' %}
+
+<script>
+    const searchInput = document.getElementById('incomeSearch');
+    const dateInput = document.getElementById('incomeDate');
+    const methodFilter = document.getElementById('methodFilter');
+    const rows = document.querySelectorAll('.income-row');
+
+    function filterIncome() {
+        const searchVal = searchInput.value.toLowerCase();
+        const dateVal = dateInput.value;
+        const methodVal = methodFilter.value;
+        let newTotal = 0; let count = 0;
+
+        rows.forEach(row => {
+            const rowText = row.innerText.toLowerCase();
+            const rowDate = row.getAttribute('data-date');
+            const rowMethod = row.getAttribute('data-method');
+            const amount = parseInt(row.querySelector('.price-val').getAttribute('data-amount')) || 0;
+
+            const matchSearch = rowText.includes(searchVal);
+            const matchDate = !dateVal || rowDate === dateVal;
+            const matchMethod = !methodVal || rowMethod === methodVal;
+
+            if (matchSearch && matchDate && matchMethod) {
+                row.style.display = ""; newTotal += amount; count++;
+            } else { row.style.display = "none"; }
+        });
+        document.getElementById('totalPribadi').innerText = "Rp " + newTotal.toLocaleString('id-ID');
+        document.getElementById('dataCount').innerText = count;
+    }
+
+    function resetIncomeFilter() {
+        searchInput.value = "";
+        dateInput.value = "";
+        methodFilter.value = "";
+        filterIncome();
+    }
+
+    searchInput.addEventListener('keyup', filterIncome);
+    dateInput.addEventListener('change', filterIncome);
+    methodFilter.addEventListener('change', filterIncome);
+
+    function showDetail(nama, tgl, jam, layanan, pelayan, total, metode, bayar, kembali) {
+        document.getElementById('detNama').innerText = nama;
+        document.getElementById('detTgl').innerText = tgl;
+        document.getElementById('detJam').innerText = jam + " WIB";
+        document.getElementById('detLayanan').innerText = layanan;
+        document.getElementById('detMetodeText').innerText = metode || '-';
+        document.getElementById('detTotal').innerText = "Rp " + Number(total).toLocaleString('id-ID');
+        
+        const cashDetail = document.getElementById('detCashDetail');
+        if (metode === 'Tunai') {
+            cashDetail.style.display = 'block';
+            document.getElementById('detBayar').innerText = "Rp " + Number(bayar || 0).toLocaleString('id-ID');
+            document.getElementById('detKembali').innerText = "Rp " + Number(kembali || 0).toLocaleString('id-ID');
+        } else {
+            cashDetail.style.display = 'none';
+        }
+        new bootstrap.Modal(document.getElementById('detailModal')).show();
+    }
+
+    function showInvoice(nama, layanan, pelayan, total, metode, tgl, bayar, kembali) {
+        document.getElementById('strukNama').innerText = nama;
+        document.getElementById('strukLayanan').innerText = layanan;
+        document.getElementById('strukPelayan').innerText = pelayan;
+        document.getElementById('strukMetode').innerText = metode || '-';
+        document.getElementById('strukTotal').innerText = "Rp " + Number(total).toLocaleString('id-ID');
+        
+        const tunaiDetail = document.getElementById('strukTunaiDetail');
+        if (metode === 'Tunai') {
+            tunaiDetail.style.display = 'block';
+            document.getElementById('strukBayar').innerText = "Rp " + Number(bayar || 0).toLocaleString('id-ID');
+            document.getElementById('strukKembalian').innerText = "Rp " + Number(kembali || 0).toLocaleString('id-ID');
+        } else {
+            tunaiDetail.style.display = 'none';
+        }
+        new bootstrap.Modal(document.getElementById('strukModal')).show();
+    }
+
+    function exportPendapatanExcel() {
+        const rows = document.querySelectorAll('.income-row');
+        let data = [["No", "Tanggal", "Jam", "Pelanggan", "Layanan", "Metode", "Biaya"]];
+        rows.forEach((row, index) => {
+            if(row.style.display !== "none") {
+                data.push([
+                    index + 1,
+                    row.querySelector('.date-val').innerText,
+                    row.querySelector('.jam-val').innerText,
+                    row.querySelector('.cust-val').innerText,
+                    row.querySelector('.service-val').innerText,
+                    row.querySelector('.method-val').innerText,
+                    row.querySelector('.price-val').innerText
+                ]);
+            }
+        });
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Pendapatan Saya");
+        XLSX.writeFile(wb, "Pendapatan_{{ session['username'] }}_" + new Date().toLocaleDateString() + ".xlsx");
+    }
+</script>
+{% endblock %}

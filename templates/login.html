@@ -1,0 +1,231 @@
+{% extends "layout.html" %}
+{% block title %}Masuk ke Glamour Salon{% endblock %}
+
+{% block content %}
+<style>
+    /* 1. BACKGROUND AESTHETIC DENGAN OVERLAY UNGU */
+    body {
+        background: linear-gradient(rgba(106, 27, 154, 0.8), rgba(173, 20, 87, 0.7)), 
+                    url('https://images.unsplash.com/photo-1560066984-138dadb4c035?ixlib=rb-4.0.3&auto=format&fit=crop&w=1374&q=80');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        background-repeat: no-repeat;
+    }
+
+    .full-center-wrapper {
+        min-height: 90vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px 0;
+    }
+
+    /* 2. STYLE CARD GLASSMORPHISM */
+    .card-login {
+        background: rgba(255, 255, 255, 0.9) !important;
+        backdrop-filter: blur(15px);
+        border-radius: 25px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* 3. STYLE INPUT */
+    .form-control {
+        background-color: #f3e5f5 !important;
+        border: 2px solid #e1bee7;
+        border-radius: 12px;
+        padding: 12px 15px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        background-color: #fff !important;
+        border-color: var(--purple-main) !important;
+        box-shadow: 0 0 0 0.25rem rgba(106, 27, 154, 0.15);
+    }
+
+    /* 4. TOGGLE PASSWORD STYLE */
+    .password-container { position: relative; }
+    .password-toggle {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        cursor: pointer;
+        color: var(--purple-main);
+        z-index: 10;
+        font-size: 1.2rem;
+    }
+
+    /* 5. IKON SALON */
+    .salon-icon {
+        font-size: 3.5rem;
+        background: linear-gradient(45deg, var(--purple-main), var(--pink-main));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: inline-block;
+    }
+
+    /* 6. STYLE DAFTAR DI SINI */
+    .register-link-custom {
+        color: var(--pink-main);
+        text-decoration: none;
+        font-weight: bold;
+        transition: all 0.3s ease;
+        display: inline-block;
+    }
+
+    .register-link-custom:hover {
+        color: #dc3545 !important;
+        text-decoration: underline;
+    }
+
+    .forgot-link { color: var(--pink-main); text-decoration: none; font-weight: 600; font-size: 0.85rem; }
+    .forgot-link:hover { text-decoration: underline; }
+
+    /* =============================================
+       PERBAIKAN CHECKBOX (INGAT SAYA) 
+       ============================================= */
+    .form-check-input {
+        border: 2px solid var(--purple-main) !important; /* Garis tepi ungu di awal */
+        background-color: transparent;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+
+    /* Efek saat kursor berada di atas kotak (Hover) */
+    .form-check-input:hover {
+        box-shadow: 0 0 8px rgba(106, 27, 154, 0.4);
+        border-color: var(--purple-main) !important;
+    }
+
+    /* Warna saat dicentang (Klik) */
+    .form-check-input:checked { 
+        background-color: var(--purple-main) !important; 
+        border-color: var(--purple-main) !important; 
+    }
+
+    /* Menghilangkan shadow biru default browser saat diklik */
+    .form-check-input:focus {
+        box-shadow: 0 0 0 0.25rem rgba(106, 27, 154, 0.25) !important;
+        border-color: var(--purple-main) !important;
+    }
+
+    /* Button Masuk */
+    .btn-salon {
+        transition: all 0.3s ease;
+    }
+    .btn-salon:hover {
+        filter: brightness(1.1);
+        box-shadow: 0 5px 15px rgba(106, 27, 154, 0.3);
+    }
+</style>
+
+<div class="full-center-wrapper">
+    <div class="col-md-5 col-lg-4">
+        <div class="card card-login p-4 p-md-5 shadow-lg border-0">
+            <div class="text-center mb-4">
+                <div class="salon-icon mb-2">✨💅✨</div>
+                <h2 class="fw-bold" style="color: var(--purple-main);">Selamat Datang</h2>
+                <p class="text-muted small">Kelola janji temu kecantikan Anda sekarang</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} border-0 shadow-sm small py-2">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            <form action="/login" method="POST">
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-purple">USERNAME</label>
+                    <input type="text" name="username" class="form-control" placeholder="Masukkan username" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold small text-purple">PASSWORD</label>
+                    <div class="password-container">
+                        <input type="password" name="password" id="loginPass" class="form-control" placeholder="••••••••" required>
+                        <i class="bi bi-eye-slash password-toggle" id="toggleLoginPass"></i>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="remember" id="rememberMe">
+                        <label class="form-check-label small text-muted cursor-pointer" for="rememberMe" style="cursor: pointer;">Ingat Saya</label>
+                    </div>
+                    <a href="#" class="forgot-link" data-bs-toggle="modal" data-bs-target="#forgotModal">Lupa Password?</a>
+                </div>
+
+                <button type="submit" class="btn btn-salon w-100 py-3 fw-bold fs-5 shadow">
+                    <i class="bi bi-box-arrow-in-right me-2"></i>MASUK SEKARANG
+                </button>
+            </form>
+
+            <div class="text-center mt-4">
+                <p class="small text-muted">Belum menjadi member? 
+                    <a href="/register" class="register-link-custom">Daftar di Sini</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="forgotModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 card-login shadow-lg">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold text-purple"><i class="bi bi-key-fill me-2"></i>Ganti Password</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form action="/reset_password" method="POST">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Konfirmasi Username</label>
+                        <input type="text" name="username" class="form-control shadow-none" required placeholder="Username Anda">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Password Baru</label>
+                        <div class="password-container">
+                            <input type="password" name="new_password" id="forgotPass" class="form-control shadow-none" required placeholder="••••••••">
+                            <i class="bi bi-eye-slash password-toggle" id="toggleForgotPass"></i>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-salon w-100 py-2 shadow">SIMPAN PASSWORD</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Logic Toggle Password Login
+    const toggleLoginPass = document.querySelector('#toggleLoginPass');
+    const loginPassInput = document.querySelector('#loginPass');
+    if(toggleLoginPass) {
+        toggleLoginPass.addEventListener('click', function () {
+            const type = loginPassInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            loginPassInput.setAttribute('type', type);
+            this.classList.toggle('bi-eye');
+            this.classList.toggle('bi-eye-slash');
+        });
+    }
+
+    // Logic Toggle Password Lupa Pass
+    const toggleForgotPass = document.querySelector('#toggleForgotPass');
+    const forgotPassInput = document.querySelector('#forgotPass');
+    if(toggleForgotPass) {
+        toggleForgotPass.addEventListener('click', function () {
+            const type = forgotPassInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            forgotPassInput.setAttribute('type', type);
+            this.classList.toggle('bi-eye');
+            this.classList.toggle('bi-eye-slash');
+        });
+    }
+</script>
+{% endblock %}
